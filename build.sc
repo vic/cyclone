@@ -49,8 +49,8 @@ class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String) ex
     ivy"com.raquo::laminar::0.11.0"
   )
 
-//  object tests extends Tests {
-//    def ivyDeps = Agg(ivy"com.lihaoyi::utest::0.7.4") ++ self.compileIvyDeps()
-//    def testFrameworks = Seq("utest.runner.Framework")
-//  }
+  object tests extends Tests {
+    def ivyDeps = Agg(ivy"com.lihaoyi::utest::0.7.4")
+    def testFrameworks = Seq("utest.runner.Framework")
+  }
 }
