@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -ex
+
+BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+JAVA_SELECT=$(awk '/^#graalvm:/ {print$2}' "$BASE_DIR"/.tool-versions)
+SCALA_SELECT=$(awk '/^scala/ {print$2}' "$BASE_DIR"/.tool-versions)
+MILL_SELECT=$(< "$BASE_DIR"/.mill-version)
+
+function die {
+  echo "$*" >&2
+  exit 1
+}
+
+case "$1" in
+
+ jitpack)
+   exec $0 mill -j 0 __.publishM2Local
+ ;;
+
+ mill)
+   exec $0 cs launch "mill:$MILL_SELECT" --jvm "$JAVA_SELECT" --scala "$SCALA_SELECT" -- "${@:2}"
+ ;;
+
+ mill-i)
+   exec $0 cs launch "mill-interactive:$MILL_SELECT" --jvm "$JAVA_SELECT" --scala "$SCALA_SELECT" -- -i "${@:2}"
+ ;;
+
+ scalafmt)
+   exec $0 cs launch --jvm "$JAVA_SELECT" --scala "$SCALA_SELECT" scalafmt -- --mode diff --diff-branch master "${@:2}"
+ ;;
+
+ scalafmt-test)
+   $0 scalafmt --test
+ ;;
+
+ cs)
+   test -x $BASE_DIR/cs || {
+     curl -o $BASE_DIR/cs -qL https://git.io/coursier-cli
+     chmod +x $BASE_DIR/cs
+   }
+   exec $BASE_DIR/cs "${@:2}"
+ ;;
+
+ example)
+  echo PENDING
+  exit 0
+  $0 mill-i -j 0 -D PUBLISH_VERSION=latest __.publishLocal
+  (cd example; ../ci mill hello.run)
+  (cd example; ../ci mill hello.tests)
+ ;;
+
+ test)
+   echo PENDING
+   exit 0
+   $0 mill -j 0 __.tests
+ ;;
+
+ release)
+   git tag $(<VERSION)
+   git push --tags
+ ;;
+
+esac

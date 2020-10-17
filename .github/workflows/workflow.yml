@@ -1,0 +1,70 @@
+name: Main workflow
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+  schedule:
+    - cron: "0 0 * * 5"
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: coursier/cache-action@v3
+        with:
+          extraFiles: cs
+      - run:  ./ci test
+
+  scalafmt:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: coursier/cache-action@v3
+        with:
+          extraFiles: cs
+      - run:  ./ci scalafmt-test
+
+  example:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: coursier/cache-action@v3
+        with:
+          extraFiles: cs
+      - run:  ./ci example
+
+  jitpack-commit:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: JitPack commit build
+        run: curl -vSL https://jitpack.io/com/github/$GITHUB_REPOSITORY/$GITHUB_SHA/build.log || true
+
+  jitpack-release:
+    needs: test
+    runs-on: ubuntu-latest
+    if: contains(github.ref, 'tags')
+    steps:
+      - name: JitPack release build
+        run: |
+          curl -vSL https://jitpack.io/com/github/$GITHUB_REPOSITORY/$(echo "${{github.ref}}" | sed 's#tags/##')/build.log || true
