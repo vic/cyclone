@@ -13,6 +13,13 @@ function die {
 }
 
 case "$1" in
+ npx)
+   exec "$($0 cs java-home --jvm "$JAVA_SELECT" -q)/bin/npx" "${@:2}"
+   ;;
+
+ servor)
+   exec $0 npx servor --static --browse --reload
+   ;;
 
  jitpack)
    exec $0 mill -j 0 __.publishM2Local

@@ -1,17 +1,18 @@
 package cyclone
 
 import com.raquo.laminar.api.L._
+import com.raquo.laminar.nodes.ReactiveElement
 
 private[cyclone] trait Types[I, S, O] {
   type Input  = I
   type State  = S
   type Output = O
 
-  type E <: Element
+  type Element = ReactiveElement.Base
 
   trait Action
-  case class Mounted(ctx: MountContext[E]) extends Action
-  case class Unmounted(el: E)              extends Action
+  case class Mounted(ctx: MountContext[Element]) extends Action
+  case class Unmounted(el: Element)              extends Action
 
   type InputHandler  = PartialFunction[Input, Effect[_]]
   type ActionHandler = PartialFunction[Action, Effect[_]]
