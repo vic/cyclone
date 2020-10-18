@@ -4,8 +4,6 @@ import com.raquo.airstream.features.FlattenStrategy.ConcurrentStreamStrategy
 import com.raquo.laminar.api.L._
 import com.raquo.laminar.nodes.ParentNode
 
-import scala.util.Try
-
 private[cyclone] trait Vortex[I, S, O] extends Types[I, S, O] with Cyclone[I, S, O] with Effects[I, S, O] {
   private lazy val effects = new EventBus[Effect[_]]
 

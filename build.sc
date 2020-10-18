@@ -1,14 +1,19 @@
 // -*- mode: scala -*-
 
-import mill._, scalalib._, publish._, scalajslib._
+import mill._
+import scalalib._
+import publish._
+import scalajslib._
 import ammonite.ops._
+import mill.define.Cross
+
 import scala.util.Properties
 
 object meta {
 
   val crossVersions = for { 
    scala <- Seq("2.13.2")
-   scalaJS <- Seq("1.2.0")
+   scalaJS <- Seq("1.1.0")
   } yield (scala, scalaJS)
 
   implicit val wd: os.Path = os.pwd
@@ -46,11 +51,20 @@ class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String) ex
   )
 
   override def ivyDeps = super.ivyDeps() ++ Seq(
-    ivy"com.raquo::laminar::0.11.0"
+    ivy"com.raquo::laminar::0.11.0",
+    ivy"com.raquo::airstream::0.11.1"
   )
 
-  object tests extends Tests {
+  object tests extends Tests with ScalaJSModule {
+    override def scalaJSVersion = crossScalaJSVersion
     def ivyDeps = Agg(ivy"com.lihaoyi::utest::0.7.4")
     def testFrameworks = Seq("utest.runner.Framework")
   }
+}
+
+object docs extends ScalaModule with ScalaJSModule {
+  val cross = meta.crossVersions.map{case (a, b) => Seq(a, b)}.head
+  override def scalaVersion: T[String] = cross.head
+  override def scalaJSVersion: T[String] = cross.last
+  override def moduleDeps = Seq(cyclone(cross.head, cross.last))
 }
