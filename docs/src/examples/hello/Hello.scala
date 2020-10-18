@@ -1,8 +1,7 @@
 package examples.hello
 
 import com.raquo.laminar.api.L._
-import cyclone.Cyclone
-import cyclone.Effects._
+import cyclone._
 
 object Hello {
 
@@ -12,9 +11,6 @@ object Hello {
     Cyclone[SayHello, String, Nothing](
       initState = "World",
       inHandler = {
-        case SayHello(name) if name.trim.isEmpty =>
-          updateTo("World")
-
         case SayHello(name) =>
           updateTo(name.toUpperCase())
       }
@@ -24,7 +20,7 @@ object Hello {
     div(
       cycle.bind(),
       "Hello ",
-      child.text <-- cycle.state,
+      child.text <-- cycle,
       br(),
       input(
         placeholder := "Enter your name",
