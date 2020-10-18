@@ -91,32 +91,15 @@ trait Flows {
     for {
       sub <- context[Element, DynamicSubscription](ReactiveElement.bindBus(_, events)(to))
       _   <- stream(events.compose(stopAt).compose(onlyFirst).map(pure(_)))
-    } yield sub.kill()
+    } yield ()
 
-//  def subscribe[I, O](out: WriteBus[O], in: EventStream[I])(active: Signal[Boolean]): Effect[I] = {
-//    for {
-//      el <- element[Element]
-//      dynSub = DynamicSubscription.subscribeBus(dynOwner, )
-//    } yield ()
-//  }
-//
-//
-//  def ask[S, X, I, O](cyclone: Cyclone[I, _, O])(rq: S => I)(rs: PartialFunction[(I, O), X]): Effect[X] = {
-//    for {
-//      q <- effect(rq)
-//      _ <- pure[S, Unit](cyclone.addSource())
-//      r <- stream(cyclone.output.map(q -> _).collect(rs).map(pure[S, X](_)))
-//    } yield r
-//  }
+  def tell[S, I](fn: S => I, to: Cyclone[I, _, _]): Flow[I] = {
+    for {
+      i <- effect(fn(_))
+      _ <- send(EventStream.fromValue(i, emitOnce = true), to.input)()
+    } yield i
+  }
 
-//  def ask[S, O, I, X](fwd: S => O)(bwd: PartialFunction[I, X]): Effect[X] = {
-//    for {
-//      (prevHandler, _) <- updateHandlerTo(emptyInputHandler)
-//      (_, newHandler) <- updateHandlerTo {
-//        case i if bwd.isDefinedAt(i) =>
-//      }
-//      o <- emitOutput(fwd)
-//    } yield ()
-//  }
+  // TODO: Ask, Subscribe
 
 }
