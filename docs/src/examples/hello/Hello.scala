@@ -13,16 +13,16 @@ object Hello {
       initState = "World",
       inHandler = {
         case SayHello(name) if name.trim.isEmpty =>
-          update("World")
+          updateTo("World")
 
         case SayHello(name) =>
-          update(name.toUpperCase())
+          updateTo(name.toUpperCase())
       }
     )
 
   val view: Div =
     div(
-      cycle.mod,
+      cycle.bind(),
       "Hello ",
       child.text <-- cycle.state,
       br(),
