@@ -11,26 +11,29 @@ import scala.util.Properties
 
 object meta {
 
-  val crossVersions = for { 
-   scala <- Seq("2.13.2")
-   scalaJS <- Seq("1.1.0")
+  val crossVersions = for {
+    scala   <- Seq("2.13.2")
+    scalaJS <- Seq("1.1.0")
   } yield (scala, scalaJS)
 
   implicit val wd: os.Path = os.pwd
 
   def nonEmpty(s: String): Option[String] = s.trim match {
     case v if v.isEmpty => None
-    case v => Some(v)
+    case v              => Some(v)
   }
 
   val versionFromEnv = Properties.propOrNone("PUBLISH_VERSION")
-  val gitSha = nonEmpty(%%("git", "rev-parse", "--short", "HEAD").out.trim)
-  val gitTag = nonEmpty(%%("git", "tag", "-l", "-n0", "--points-at", "HEAD").out.trim)
+  val gitSha         = nonEmpty(%%("git", "rev-parse", "--short", "HEAD").out.trim)
+  val gitTag         = nonEmpty(%%("git", "tag", "-l", "-n0", "--points-at", "HEAD").out.trim)
   val publishVersion = (versionFromEnv orElse gitTag orElse gitSha).getOrElse("latest")
 }
 
 object cyclone extends Cross[Cyclone](meta.crossVersions: _*)
-class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String) extends PublishModule with ScalaJSModule with CrossScalaModule { self =>
+class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String)
+    extends PublishModule
+    with ScalaJSModule
+    with CrossScalaModule { self =>
   def publishVersion = meta.publishVersion
 
   override def millSourcePath: Path = super.millSourcePath / os.up
@@ -57,14 +60,14 @@ class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String) ex
 
   object tests extends Tests with ScalaJSModule {
     override def scalaJSVersion = crossScalaJSVersion
-    def ivyDeps = Agg(ivy"com.lihaoyi::utest::0.7.4")
-    def testFrameworks = Seq("utest.runner.Framework")
+    def ivyDeps                 = Agg(ivy"com.lihaoyi::utest::0.7.4")
+    def testFrameworks          = Seq("utest.runner.Framework")
   }
 }
 
 object docs extends ScalaModule with ScalaJSModule {
-  val cross = meta.crossVersions.map{case (a, b) => Seq(a, b)}.head
-  override def scalaVersion: T[String] = cross.head
+  val cross                              = meta.crossVersions.map { case (a, b) => Seq(a, b) }.head
+  override def scalaVersion: T[String]   = cross.head
   override def scalaJSVersion: T[String] = cross.last
-  override def moduleDeps = Seq(cyclone(cross.head, cross.last))
+  override def moduleDeps                = Seq(cyclone(cross.head, cross.last))
 }

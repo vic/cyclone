@@ -2,47 +2,56 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-private[cyclone] trait Effects[I, S, O] { self: Types[I, S, O] =>
+object Effects {
+  import Types._
 
-  protected val noEffect: Effect[Nothing] = NoEffect
+  val noEffect: Effect[Nothing] = NoEffect
 
-  protected def emitAction(fn: State => Action): Effect[Action] =
+  def emitAction[State, Action](fn: State => Action): Effect[Action] =
     EmitAction(fn(_))
 
-  protected def emitAction(action: => Action): Effect[Action] =
-    EmitAction(_ => action)
+  def emitAction[State, Action](action: => Action): Effect[Action] =
+    EmitAction[State, Action](_ => action)
 
-  protected def emitInput(fn: State => Input): Effect[Input] =
+  def emitInput[State, Input](fn: State => Input): Effect[Input] =
     EmitInput(fn(_))
 
-  protected def emitInput(input: => Input): Effect[Input] =
-    EmitInput(_ => input)
+  def emitInput[State, Input](input: => Input): Effect[Input] =
+    EmitInput[State, Input](_ => input)
 
-  protected def emitOutput(fn: State => Output): Effect[Output] =
+  def emitOutput[State, Output](fn: State => Output): Effect[Output] =
     EmitOutput(fn(_))
 
-  protected def emitOutput(output: => Output): Effect[Output] =
-    EmitOutput(_ => output)
+  def emitOutput[State, Output](output: => Output): Effect[Output] =
+    EmitOutput[State, Output](_ => output)
 
-  protected def update(fn: State => State): Effect[(State, State)] =
-    UpdateState(fn(_))
+  def update[State](fn: State => State): Effect[(State, State)] =
+    UpdateState[State](fn)
 
-  protected def updateInputHandler(fn: InputHandler => InputHandler): Effect[(InputHandler, InputHandler)] =
-    UpdateInputHandler(fn(_))
+  def update[State](state: State): Effect[(State, State)] =
+    UpdateState[State](_ => state)
 
-  protected def updateActionHandler(fn: ActionHandler => ActionHandler): Effect[(ActionHandler, ActionHandler)] =
-    UpdateActionHandler(fn(_))
+  def updateInputHandler[I](fn: InputHandler[I] => InputHandler[I]): Effect[(InputHandler[I], InputHandler[I])] =
+    UpdateInputHandler(fn)
 
-  protected def currentState: Effect[State] =
-    Pure[State](identity)
+  def updateActionHandler[A](
+      fn: ActionHandler[A] => ActionHandler[A]
+  ): Effect[(ActionHandler[A], ActionHandler[A])] =
+    UpdateActionHandler(fn)
 
-  protected def effect[X](fn: State => X): Effect[X] =
-    Pure[X](fn(_))
+  def currentState[State]: Effect[State] =
+    Pure[State, State](identity)
 
-  protected def pure[X](fn: => X): Effect[X] =
-    Pure[X](_ => fn)
+  def effect[State, X](fn: State => X): Effect[X] =
+    Pure[State, X](fn)
 
-  protected def stream[X](fn: => EventStream[Effect[X]]): Effect[X] =
-    Stream[X](fn)
+  def pure[State, X](fn: => X): Effect[X] =
+    Pure[State, X](_ => fn)
+
+  def stream[State, X](fn: State => EventStream[Effect[X]]): Effect[X] =
+    Stream[State, X](fn)
+
+  def stream[State, X](fn: => EventStream[Effect[X]]): Effect[X] =
+    Stream[State, X](_ => fn)
 
 }

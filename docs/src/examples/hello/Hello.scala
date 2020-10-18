@@ -1,32 +1,34 @@
 package examples.hello
 
 import com.raquo.laminar.api.L._
-import cyclone._
+import cyclone.Cyclone
+import cyclone.Effects._
 
 object Hello {
 
   case class SayHello(to: String)
 
   val cycle: Cyclone[SayHello, Option[String], Nothing] =
-    new Landspout[SayHello, Option[String], Nothing] {
-      override protected val initialState: State = None
-      override lazy val initialInputHandler: InputHandler = {
-        case SayHello(name) => update(_ => Some(name))
+    Cyclone[SayHello, Option[String], Nothing](
+      initState = None,
+      inHandler = {
+        case SayHello(name) if name.trim.isEmpty =>
+          update(None)
+
+        case SayHello(name) =>
+          update(Some(name.toUpperCase()))
       }
-    }
+    )
 
   val view: Div =
     div(
       cycle.mod,
-      div(
-        "Hello ",
-        child.text <-- cycle.state.map(_.getOrElse(""))
-      ),
+      "Hello ",
+      child.text <-- cycle.state.map(_.getOrElse("World")),
+      br(),
       input(
         placeholder := "Enter your name",
-        inContext { input =>
-          input.events(onKeyUp).mapTo(SayHello(input.ref.value)) --> cycle.input
-        }
+        inContext { input => onKeyUp.mapTo(SayHello(input.ref.value)) --> cycle.input }
       )
     )
 
