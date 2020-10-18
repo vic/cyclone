@@ -8,15 +8,15 @@ object Hello {
 
   case class SayHello(to: String)
 
-  val cycle: Cyclone[SayHello, Option[String], Nothing] =
-    Cyclone[SayHello, Option[String], Nothing](
-      initState = None,
+  val cycle: Cyclone[SayHello, String, Nothing] =
+    Cyclone[SayHello, String, Nothing](
+      initState = "World",
       inHandler = {
         case SayHello(name) if name.trim.isEmpty =>
-          update(None)
+          update("World")
 
         case SayHello(name) =>
-          update(Some(name.toUpperCase()))
+          update(name.toUpperCase())
       }
     )
 
@@ -24,11 +24,11 @@ object Hello {
     div(
       cycle.mod,
       "Hello ",
-      child.text <-- cycle.state.map(_.getOrElse("World")),
+      child.text <-- cycle.state,
       br(),
       input(
         placeholder := "Enter your name",
-        inContext { input => onKeyUp.mapTo(SayHello(input.ref.value)) --> cycle.input }
+        inContext { input => onKeyUp.mapTo(SayHello(input.ref.value)) --> cycle }
       )
     )
 
