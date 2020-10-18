@@ -1,7 +1,6 @@
 package cyclone
 
 import com.raquo.laminar.api.L._
-import cyclone.Types._
 
 trait Waterspout[I, S, O] extends Vortex[I, S, O] {
   protected def makeState(updates: EventStream[S]): Signal[S]

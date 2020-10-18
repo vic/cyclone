@@ -1,8 +1,6 @@
 package cyclone
 
 import com.raquo.laminar.api.L._
-import Types._
-import cyclone.Effects.noEffect
 
 // Cyclones are circular Airstreams around an stateful Vortex
 trait Cyclone[I, S, O] {
@@ -10,7 +8,7 @@ trait Cyclone[I, S, O] {
   val state: Signal[S]
   val output: EventStream[O]
 
-  def bind[E <: Element](initialEffect: MountContext[E] => Effect[_] = { _: MountContext[E] => noEffect }): Mod[E]
+  def bind[E <: Element](initialEffect: Flow[_] = noEffect): Mod[E]
 }
 
 object Cyclone {
@@ -35,7 +33,7 @@ object Cyclone {
       override protected val initialState: S                                        = initState
       override protected lazy val initialInputHandler: InputHandler[Either[LO, RO]] = inHandler
 
-      override def bind[E <: Element](initialEffect: MountContext[E] => Effect[_]): Mod[E] =
+      override def bind[E <: Element](initialEffect: Flow[_]): Mod[E] =
         inContext { el =>
           el.amend(
             super.bind(initialEffect),
