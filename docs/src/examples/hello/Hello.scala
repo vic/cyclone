@@ -7,27 +7,23 @@ object Hello {
 
   case class SayHello(to: String)
 
-  val cycle =
-    Cyclone[Div, SayHello, String, Nothing] build { flow =>
-      import flow._
-
-      val handler: Handler = {
+  val vortex: Vortex[Div, SayHello, String, Nothing] =
+    Vortex[Div, SayHello, String, Nothing] build { cycle =>
+      cycle(initState = "World") {
         case SayHello(name) =>
-          updateTo(name.toUpperCase())
+          cycle.updateTo(name.toUpperCase())
       }
-
-      create("World", handler)
     }
 
   val view: Div =
     div(
-      cycle.bind(),
+      vortex.bind(),
       "Hello ",
-      child.text <-- cycle.state,
+      child.text <-- vortex.state,
       br(),
       input(
         placeholder := "Enter your name",
-        inContext { input => onKeyUp.mapTo(SayHello(input.ref.value)) --> cycle }
+        inContext { input => onKeyUp.mapTo(SayHello(input.ref.value)) --> vortex }
       )
     )
 

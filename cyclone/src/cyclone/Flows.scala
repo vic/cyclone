@@ -39,7 +39,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
     for {
       child <- spawn[X, Unit, X] { whirl =>
         // create cyclone using the underlying whirl types
-        whirl.create((), whirl.handleAll(x => whirl.emitOutput(x)))
+        whirl(())(whirl.emitOutput(_))
       }(xs)
     } yield child.output
 
@@ -65,16 +65,16 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   def bind(binder: => Binder[E]): Flow[E] =
     element.map(_.amend(binder))
 
-  def whirl[WE <: Element, WI, WS, WO](
-      w: Cyclone.Whirl[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
-  ): Flow[Cyclone[WE, WI, WS, WO]] =
-    pure(Cyclone[WE, WI, WS, WO].build(w))
+  def spin[WE <: Element, WI, WS, WO](
+      w: Vortex.Cycle[WE, WI, WS, WO] => Vortex[WE, WI, WS, WO]
+  ): Flow[Vortex[WE, WI, WS, WO]] =
+    pure(Vortex[WE, WI, WS, WO].build(w))
 
   def spawn[CI, CS, CO](
-      c: Cyclone.Whirl[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
-  )(initialFlow: Flow[_] = EmptyFlow): Flow[Cyclone[E, CI, CS, CO]] =
+      c: Vortex.Cycle[E, CI, CS, CO] => Vortex[E, CI, CS, CO]
+  )(initialFlow: Flow[_] = EmptyFlow): Flow[Vortex[E, CI, CS, CO]] =
     for {
-      cyclone <- whirl(c)
+      cyclone <- spin(c)
       _       <- bind(cyclone.bind(initialFlow))
     } yield cyclone
 
@@ -93,7 +93,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to)
 
-  def tell(to: Cyclone[_, _, _, _])(i: => to.Input): Flow[Unit] =
+  def tell(to: Vortex[_, _, _, _])(i: => to.Input): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe

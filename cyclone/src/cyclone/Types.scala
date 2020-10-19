@@ -39,8 +39,6 @@ trait Types {
 
   case class FromStream[+X] private[cyclone] (fn: () => EventStream[Flow[X]]) extends Flow[X]
 
-  case class IntoStream[+X] private[cyclone] (fn: () => Flow[X]) extends Flow[EventStream[X]]
-
   case class UpdateState[S] private[cyclone] (fn: S => S) extends Flow[(S, S)]
 
   case class EmitInput[I] private[cyclone] (fn: () => I) extends Flow[I]
