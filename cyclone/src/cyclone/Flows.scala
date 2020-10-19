@@ -2,9 +2,8 @@ package cyclone
 
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L._
-import Types._
 
-trait Flows[E <: Element, I, S, O] extends Types[E, I, S, O] {
+trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
 
   final val emptyFlow: Flow[Nothing] = EmptyFlow
   final val trueSignal               = EventStream.empty.startWith(true)

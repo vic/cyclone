@@ -1,9 +1,6 @@
 package cyclone
 
 import com.raquo.laminar.api.L._
-import com.raquo.laminar.nodes.ReactiveElement
-import Types._
-import com.raquo.laminar.api.L
 
 // Cyclones are circular Airstreams around an stateful Vortex
 trait Cyclone[E <: Element, I, S, O] extends Flows[E, I, S, O] {

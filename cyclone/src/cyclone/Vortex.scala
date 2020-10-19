@@ -3,7 +3,6 @@ package cyclone
 import com.raquo.airstream.features.FlattenStrategy.ConcurrentStreamStrategy
 import com.raquo.laminar.api.L._
 import com.raquo.laminar.nodes.ReactiveElement
-import Types._
 
 private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O] {
 

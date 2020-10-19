@@ -55,7 +55,7 @@ class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String)
 
   override def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"com.raquo::laminar::0.11.0",
-    ivy"com.raquo::airstream::0.11.1",
+    ivy"com.raquo::airstream::0.11.1"
   )
 
   object tests extends Tests with ScalaJSModule {

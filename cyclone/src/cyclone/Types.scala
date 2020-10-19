@@ -2,24 +2,21 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-trait Types[E <: Element, I, S, O] {
+trait FlowTypes[E <: Element, I, S, O] {
   type El     = E
   type Input  = I
   type State  = S
   type Output = O
 
-  type UpdateState   = Types.UpdateState[S]
-  type EmitInput     = Types.EmitInput[I]
-  type EmitOutput    = Types.EmitOutput[O]
-  type InContext[+X] = Types.InContext[E, X]
-  type Handler       = Types.Handler[I]
-  type UpdateHandler = Types.UpdateHandler[Handler]
+  type UpdateState   = cyclone.UpdateState[S]
+  type EmitInput     = cyclone.EmitInput[I]
+  type EmitOutput    = cyclone.EmitOutput[O]
+  type InContext[+X] = cyclone.InContext[E, X]
+  type Handler       = cyclone.Handler[I]
+  type UpdateHandler = cyclone.UpdateHandler[Handler]
 }
 
-object Types {
-
-  def apply[E <: Element, I, S, O]: Types[E, I, S, O] =
-    new Types[E, I, S, O] {}
+trait Types {
 
   sealed trait Flow[+X] {
     def flatMap[Y](f: X => Flow[Y]): Flow[Y] = FlatMap[X, Y](this, f)
