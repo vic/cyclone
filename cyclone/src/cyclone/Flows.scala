@@ -2,79 +2,74 @@ package cyclone
 
 import com.raquo.airstream.eventbus.EventBus
 import com.raquo.laminar.api.L._
-import com.raquo.laminar.nodes.ReactiveElement
+import Types._
 
-trait Flows {
+trait Flows[E <: Element, I, S, O] extends Types[E, I, S, O] {
 
-  val noEffect: Flow[Nothing] = EmptyFlow
+  final val emptyFlow: Flow[Nothing] = EmptyFlow
+  final val trueSignal               = EventStream.empty.startWith(true)
+  final val emptyHandler: Handler    = { case _ => EmptyFlow }
 
-  def emptyInputHandler[I]: InputHandler[I] = { case _ => EmptyFlow }
+  def handleAll(fn: I => Flow[_]): Handler = { case i => fn(i) }
 
-  def emitInput[S, I](fn: S => I): Flow[I] =
-    EmitInput[S, I](fn)
+  def emitInput(input: => I): Flow[I] =
+    EmitInput(() => input)
 
-  def emitInput[S, I](input: => I): Flow[I] =
-    EmitInput[S, I](_ => input)
+  def emitOutput(output: => O): Flow[O] =
+    EmitOutput(() => output)
 
-  def emitOutput[S, O](fn: S => O): Flow[O] =
-    EmitOutput[S, O](fn)
+  def pure[X](fn: => X): Flow[X] =
+    Pure(() => fn)
 
-  def emitOutput[S, O](output: => O): Flow[O] =
-    EmitOutput[S, O](_ => output)
+  def current: Flow[S] =
+    update(identity).map(_._2)
 
-  def current[S]: Flow[S] =
-    Pure[S, S](identity)
+  def update(fn: S => S): Flow[(S, S)] =
+    UpdateState(fn)
 
-  def update[S](fn: S => S): Flow[(S, S)] =
-    UpdateState[S](fn)
+  def updateTo(state: => S): Flow[(S, S)] =
+    UpdateState((_: S) => state)
 
-  def updateTo[S](state: => S): Flow[(S, S)] =
-    UpdateState[S](_ => state)
+  def updateHandler(fn: Handler => Handler): Flow[(Handler, Handler)] =
+    UpdateHandler(fn)
 
-  def updateHandler[I](fn: InputHandler[I] => InputHandler[I]): Flow[(InputHandler[I], InputHandler[I])] =
-    UpdateInputHandler[I](fn)
+  def updateHandlerTo(fn: => Handler): Flow[(Handler, Handler)] =
+    UpdateHandler((_: Handler) => fn)
 
-  def updateHandlerTo[I](fn: => InputHandler[I]): Flow[(InputHandler[I], InputHandler[I])] =
-    UpdateInputHandler[I](_ => fn)
-
-  def effect[S, X](fn: S => X): Flow[X] =
-    Pure[S, X](fn)
-
-  def pure[S, X](fn: => X): Flow[X] =
-    Pure[S, X](_ => fn)
-
-  def stream[X](xs: Flow[X]): Flow[EventStream[X]] =
+  def intoStream[X](xs: Flow[X]): Flow[EventStream[X]] =
     for {
-      _ <- pure(())
-      bus = new EventBus[X]
-      x <- xs
-      _ = bus.writer.onNext(x)
-    } yield bus.events
+      child <- spawn {
+        new Vortex[E, X, Unit, X] {
+          override val state: Signal[Unit] = EventStream.empty.startWith(())
+          override protected val inputHandler: Signal[Handler] =
+            EventStream.empty.startWith { case x => emitOutput(x) }
+        }
+      }(xs)
+    } yield child.output
 
-  def stream[S, X](fn: S => EventStream[Flow[X]]): Flow[X] =
-    Stream[S, X](fn)
+  def fromStream[X](fn: => EventStream[X]): Flow[X] =
+    fromFlowStream(fn.map(pure(_)))
 
-  def stream[S, X](fn: => EventStream[Flow[X]]): Flow[X] =
-    Stream[S, X](_ => fn)
+  def fromFlowStream[X](fn: => EventStream[Flow[X]]): Flow[X] =
+    FromStream[X](() => fn)
 
-  def callback[S, X](fn: => ((X => Unit) => Unit)): Flow[X] =
-    callback[S, X]((_: S) => fn)
-
-  def callback[S, X](fn: S => ((X => Unit) => Unit)): Flow[X] =
-    Stream[S, X] { s =>
-      val cb  = fn(s)
+  def callback[X](cb: => ((X => Unit) => Unit)): Flow[X] =
+    FromStream[X] { () =>
       val bus = new EventBus[X]
       cb(bus.writer.onNext)
-      bus.events.map(pure[S, X](_))
+      bus.events.map(pure[X](_))
     }
 
-  def context[E <: Element, X](fn: E => X): Flow[X] =
+  def context[X](fn: E => X): Flow[X] =
     InContext[E, X](fn)
 
-  def element[E <: Element]: Flow[E] = context[E, E](identity)
+  def element: Flow[E] = context[E](identity)
 
-  def bind[E <: Element](binder: Binder[E]): Flow[Unit] =
-    element[E].map[Unit](_.amend(binder))
+  def bind(binder: Binder[E]): Flow[E] =
+    element.map(_.amend(binder))
+
+  def spawn[CI, CS, CO](c: Cyclone[E, CI, CS, CO])(initialFlow: Flow[_] = EmptyFlow): Flow[c.type] =
+    bind(c.bind(initialFlow)).mapTo(c)
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {
     var first = true
@@ -85,20 +80,14 @@ trait Flows {
     }
   }
 
-  def send[S, X](events: EventStream[X], to: WriteBus[X])(
-      stopAt: EventStream[X] => EventStream[Any] = identity[EventStream[X]](_)
-  ): Flow[Unit] =
-    for {
-      sub <- context[Element, DynamicSubscription](ReactiveElement.bindBus(_, events)(to))
-      _   <- stream(events.compose(stopAt).compose(onlyFirst).map(pure(_)))
-    } yield ()
+  def sendAll[X](events: EventStream[X], to: WriteBus[X], active: Signal[Boolean] = trueSignal): Flow[Unit] =
+    bind(events.withCurrentValueOf(active).collect { case (x, true) => x } --> to).mapTo(())
 
-  def tell[S, I](fn: S => I, to: Cyclone[I, _, _]): Flow[I] = {
-    for {
-      i <- effect(fn(_))
-      _ <- send(EventStream.fromValue(i, emitOnce = true), to.input)()
-    } yield i
-  }
+  def sendOne[X](events: EventStream[X], to: WriteBus[X]): Flow[Unit] =
+    sendAll(events.compose(onlyFirst), to)
+
+  def tell(to: Cyclone[_, _, _, _])(i: to.Input): Flow[Unit] =
+    sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe
 
