@@ -105,21 +105,20 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     flatMapFlow.collect(select).flatten
   }
 
-  private def inContextEffects(e: E) = {
+  private def inContextEffects(c: MountContext[E]) = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: InContext[_], b: (Any => Flow[_])) =>
+      case FlatMap(a: MountedContext, b: (Any => Flow[_])) =>
         EventStream
-          .fromValue(e, emitOnce = true)
-          .map(a.fn(_))
+          .fromValue(c, emitOnce = true)
           .map(b)
     }
     flatMapFlow.collect(select).flatten
   }
 
-  private def loopbackEffects(e: E): EventStream[Flow[_]] = EventStream.merge(
+  private def loopbackEffects(c: MountContext[E]): EventStream[Flow[_]] = EventStream.merge(
     handledPures,
     handledInputs,
-    inContextEffects(e),
+    inContextEffects(c),
     fromStreamFlows,
     stateStreamAndK.map(_._2),
     inputHandlerStreamAndK.map(_._2),
@@ -129,7 +128,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   override def bind(initialFlow: Flow[_]): Binder[E] = {
     ReactiveElement.bindCallback(_) { ctx =>
       ctx.thisNode.amend(
-        loopbackEffects(ctx.thisNode) --> flowBus.writer,
+        loopbackEffects(ctx) --> flowBus.writer,
         inputBus.events.map(i => EmitInput(() => i)) --> flowBus.writer,
         EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer,
         EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer

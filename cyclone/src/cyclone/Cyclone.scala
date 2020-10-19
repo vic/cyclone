@@ -3,7 +3,7 @@ package cyclone
 import com.raquo.laminar.api.L._
 
 // Cyclones are circular Airstreams around an stateful Vortex
-trait Cyclone[E <: Element, I, S, O] extends Flows[E, I, S, O] {
+trait Cyclone[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   val input: WriteBus[Input]
   val state: Signal[State]
   val output: EventStream[Output]
@@ -17,21 +17,27 @@ object Cyclone {
   implicit def toEventStream[O](cyclone: Cyclone[_, _, _, O]): EventStream[O] =
     cyclone.output
 
-  trait Apply[E <: Element, I, S, O] {
-    object Build extends Flows[E, I, S, O] with Implicits {
-      def create(initState: S, inHandler: Handler = emptyHandler, startFlow: Flow[_] = emptyFlow): Cyclone[E, I, S, O] =
-        new Landspout[E, I, S, O] {
-          override protected lazy val initialState: S         = initState
-          override protected lazy val initialHandler: Handler = inHandler
-          override protected val initialFlow: Flow[_]         = startFlow
-        }
-    }
+  case class Whirl[E <: Element, I, S, O] private[Cyclone] () extends Flows[E, I, S, O] with Implicits {
 
-    def build(fn: Build.type => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
-      fn(Build)
+    def create(
+        initState: S,
+        inHandler: Handler = emptyHandler,
+        startFlow: Flow[_] = emptyFlow
+    ): Cyclone[E, I, S, O] =
+      new Landspout[E, I, S, O] {
+        override protected lazy val initialState: State     = initState
+        override protected lazy val initialHandler: Handler = inHandler
+        override protected val initialFlow: Flow[_]         = startFlow
+      }
+
   }
 
-  def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = new Apply[E, I, S, O] {}
+  case class Apply[E <: Element, I, S, O] private[Cyclone] () {
+    def build(fn: Whirl[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
+      fn(Whirl[E, I, S, O]())
+  }
+
+  def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = Apply()
 //  final class Between private[Cyclone] (left: Cyclone[_, _, _, _], right: Cyclone[_, _, _, _]) {
 //    class Apply(flows: Flows[_, _, _, _]) {
 //      def apply(initState: flows.State, initHandler: flows.Handler): Cyclone[E, I, S, O] =

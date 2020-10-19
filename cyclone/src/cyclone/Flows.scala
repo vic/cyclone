@@ -35,14 +35,11 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   def updateHandlerTo(fn: => Handler): Flow[(Handler, Handler)] =
     UpdateHandler((_: Handler) => fn)
 
-  def intoStream[X](xs: Flow[X]): Flow[EventStream[X]] =
+  def intoStream[X](xs: => Flow[X]): Flow[EventStream[X]] =
     for {
-      child <- spawn {
-        new Vortex[E, X, Unit, X] {
-          override val state: Signal[Unit] = EventStream.empty.startWith(())
-          override protected val inputHandler: Signal[Handler] =
-            EventStream.empty.startWith { case x => emitOutput(x) }
-        }
+      child <- spawn[X, Unit, X] { whirl =>
+        // create cyclone using the underlying whirl types
+        whirl.create((), whirl.handleAll(x => whirl.emitOutput(x)))
       }(xs)
     } yield child.output
 
@@ -59,16 +56,27 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
       bus.events.map(pure[X](_))
     }
 
-  def context[X](fn: E => X): Flow[X] =
-    InContext[E, X](fn)
+  def context: Flow[MountContext[E]] =
+    MountedContext[E]()
 
-  def element: Flow[E] = context[E](identity)
+  def element: Flow[E] =
+    context.map(_.thisNode)
 
-  def bind(binder: Binder[E]): Flow[E] =
+  def bind(binder: => Binder[E]): Flow[E] =
     element.map(_.amend(binder))
 
-  def spawn[CI, CS, CO](c: Cyclone[E, CI, CS, CO])(initialFlow: Flow[_] = EmptyFlow): Flow[c.type] =
-    bind(c.bind(initialFlow)).mapTo(c)
+  def whirl[WE <: Element, WI, WS, WO](
+      w: Cyclone.Whirl[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
+  ): Flow[Cyclone[WE, WI, WS, WO]] =
+    pure(Cyclone[WE, WI, WS, WO].build(w))
+
+  def spawn[CI, CS, CO](
+      c: Cyclone.Whirl[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
+  )(initialFlow: Flow[_] = EmptyFlow): Flow[Cyclone[E, CI, CS, CO]] =
+    for {
+      cyclone <- whirl(c)
+      _       <- bind(cyclone.bind(initialFlow))
+    } yield cyclone
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {
     var first = true
@@ -79,13 +87,13 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
     }
   }
 
-  def sendAll[X](events: EventStream[X], to: WriteBus[X], active: Signal[Boolean] = trueSignal): Flow[Unit] =
+  def sendAll[X](events: => EventStream[X], to: => WriteBus[X], active: => Signal[Boolean] = trueSignal): Flow[Unit] =
     bind(events.withCurrentValueOf(active).collect { case (x, true) => x } --> to).mapTo(())
 
-  def sendOne[X](events: EventStream[X], to: WriteBus[X]): Flow[Unit] =
+  def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to)
 
-  def tell(to: Cyclone[_, _, _, _])(i: to.Input): Flow[Unit] =
+  def tell(to: Cyclone[_, _, _, _])(i: => to.Input): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe

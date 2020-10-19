@@ -8,12 +8,12 @@ trait FlowTypes[E <: Element, I, S, O] {
   type State  = S
   type Output = O
 
-  type UpdateState   = cyclone.UpdateState[S]
-  type EmitInput     = cyclone.EmitInput[I]
-  type EmitOutput    = cyclone.EmitOutput[O]
-  type InContext[+X] = cyclone.InContext[E, X]
-  type Handler       = cyclone.Handler[I]
-  type UpdateHandler = cyclone.UpdateHandler[Handler]
+  type UpdateState    = cyclone.UpdateState[S]
+  type EmitInput      = cyclone.EmitInput[I]
+  type EmitOutput     = cyclone.EmitOutput[O]
+  type MountedContext = cyclone.MountedContext[E]
+  type Handler        = cyclone.Handler[I]
+  type UpdateHandler  = cyclone.UpdateHandler[Handler]
 }
 
 trait Types {
@@ -47,7 +47,7 @@ trait Types {
 
   case class EmitOutput[O] private[cyclone] (fn: () => O) extends Flow[O]
 
-  case class InContext[E <: Element, +X] private[cyclone] (fn: E => X) extends Flow[X]
+  case class MountedContext[E <: Element] private[cyclone] () extends Flow[MountContext[E]]
 
   case class UpdateHandler[H] private[cyclone] (fn: H => H) extends Flow[(H, H)]
 
