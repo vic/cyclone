@@ -7,20 +7,23 @@ object Hello {
 
   case class SayHello(to: String)
 
-  val cycle: Cyclone[SayHello, String, Nothing] =
-    Cyclone[SayHello, String, Nothing](
-      initState = "World",
-      inHandler = {
+  val cycle =
+    Cyclone[Div, SayHello, String, Nothing] build { flow =>
+      import flow._
+
+      val handler: Handler = {
         case SayHello(name) =>
           updateTo(name.toUpperCase())
       }
-    )
+
+      create("World", handler)
+    }
 
   val view: Div =
     div(
       cycle.bind(),
       "Hello ",
-      child.text <-- cycle,
+      child.text <-- cycle.state,
       br(),
       input(
         placeholder := "Enter your name",

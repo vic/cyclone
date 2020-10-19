@@ -1,1 +1,1 @@
-package object cyclone extends Types with Flows with Implicits
+package object cyclone
