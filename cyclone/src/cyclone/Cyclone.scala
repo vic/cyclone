@@ -9,7 +9,7 @@ trait Cyclone {
     def apply(
         initState: S,
         initFlow: Flow[_] = emptyFlow
-    )(inHandler: Handler = emptyHandler): Vortex[E, I, S, O] =
+    )(inHandler: Handler = handleNone): Vortex[E, I, S, O] =
       new Landspout[E, I, S, O] {
         override protected lazy val initialState: State     = initState
         override protected lazy val initialHandler: Handler = inHandler

@@ -15,7 +15,7 @@ trait Waterspout[E <: Element, I, S, O] extends Whirl[E, I, S, O] {
 
 trait Landspout[E <: Element, I, S, O] extends Whirl[E, I, S, O] with Flows[E, I, S, O] {
   protected val initialState: State
-  protected lazy val initialHandler: Handler = emptyHandler
+  protected lazy val initialHandler: Handler = handleNone
 
   override lazy val state: Signal[State] = stateStream.startWith(initialState)
   override protected lazy val inputHandler: Signal[Handler] =

@@ -14,7 +14,7 @@ trait Between {
     def apply(
         initState: S,
         initFlow: Flow[_] = emptyFlow
-    )(inHandler: Handler = emptyHandler): Vortex[E, Either[LO, RO], S, Either[LI, RI]] =
+    )(inHandler: Handler = handleNone): Vortex[E, Either[LO, RO], S, Either[LI, RI]] =
       new Landspout[E, Either[LO, RO], S, Either[LI, RI]] {
         override protected lazy val initialState: State     = initState
         override protected lazy val initialHandler: Handler = inHandler

@@ -6,10 +6,13 @@ import com.raquo.laminar.api.L._
 trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
 
   final val emptyFlow: Flow[Nothing] = EmptyFlow
-  final val trueSignal               = EventStream.empty.startWith(true)
-  final val emptyHandler: Handler    = { case _ => EmptyFlow }
 
-  def handleAll(fn: I => Flow[_]): Handler = { case i => fn(i) }
+  def staticSignal[X](x: X): Signal[X]  = EventStream.empty.startWith(x)
+  final val trueSignal: Signal[Boolean] = staticSignal(true)
+
+  final val handleNone: Handler                     = { case _ => EmptyFlow }
+  def handleAll(fn: I => Flow[_]): Handler          = { case i => fn(i) }
+  def handleSome(h: Handler, hs: Handler*): Handler = hs.foldLeft(h)(_ orElse _)
 
   def emitInput(input: => I): Flow[I] =
     EmitInput(() => input)
