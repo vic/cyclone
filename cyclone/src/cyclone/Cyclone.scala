@@ -1,48 +1,66 @@
 package cyclone
 
 import com.raquo.laminar.api.L._
+import com.raquo.laminar.nodes.ReactiveElement
+import Types._
+import com.raquo.laminar.api.L
 
 // Cyclones are circular Airstreams around an stateful Vortex
-trait Cyclone[I, S, O] {
-  val input: WriteBus[I]
-  val state: Signal[S]
-  val output: EventStream[O]
-
-  def bind[E <: Element](initialEffect: Flow[_] = noEffect): Mod[E]
+trait Cyclone[E <: Element, I, S, O] extends Flows[E, I, S, O] {
+  val input: WriteBus[Input]
+  val state: Signal[State]
+  val output: EventStream[Output]
+  def bind(initialFlow: Flow[_] = EmptyFlow): Binder[El]
 }
 
 object Cyclone {
-
-  implicit def toWriteBus[I](cyclone: Cyclone[I, _, _]): WriteBus[I] =
+  implicit def toWriteBus[I](cyclone: Cyclone[_, I, _, _]): WriteBus[I] =
     cyclone.input
 
-  implicit def toEventStream[O](cyclone: Cyclone[_, _, O]): EventStream[O] =
+  implicit def toEventStream[O](cyclone: Cyclone[_, _, _, O]): EventStream[O] =
     cyclone.output
 
-  def apply[I, S, O](initState: S, inHandler: InputHandler[I]): Cyclone[I, S, O] =
-    new Landspout[I, S, O] {
-      override protected val initialState: S                           = initState
-      override protected lazy val initialInputHandler: InputHandler[I] = inHandler
-    }
-
-  def between[LI, LO, RI, RO, S, A](left: Cyclone[LI, _, LO], right: Cyclone[RI, _, RO])(
-      initState: S,
-      inHandler: InputHandler[Either[LO, RO]] = emptyInputHandler[Either[LO, RO]]
-  ): Cyclone[Either[LO, RO], S, Either[LI, RI]] =
-    new Landspout[Either[LO, RO], S, Either[LI, RI]] {
-      override protected val initialState: S                                        = initState
-      override protected lazy val initialInputHandler: InputHandler[Either[LO, RO]] = inHandler
-
-      override def bind[E <: Element](initialEffect: Flow[_]): Mod[E] =
-        inContext { el =>
-          el.amend(
-            super.bind(initialEffect),
-            left.output.map(Left(_)) --> input,
-            right.output.map(Right(_)) --> input,
-            output.collect { case Left(v)  => v } --> left.input,
-            output.collect { case Right(v) => v } --> right.input
-          )
+  trait Apply[E <: Element, I, S, O] {
+    object Build extends Flows[E, I, S, O] with Implicits {
+      def create(initState: S, inHandler: Handler = emptyHandler, startFlow: Flow[_] = emptyFlow): Cyclone[E, I, S, O] =
+        new Landspout[E, I, S, O] {
+          override protected lazy val initialState: S         = initState
+          override protected lazy val initialHandler: Handler = inHandler
+          override protected val initialFlow: Flow[_]         = startFlow
         }
     }
+
+    def build(fn: Build.type => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
+      fn(Build)
+  }
+
+  def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = new Apply[E, I, S, O] {}
+//  final class Between private[Cyclone] (left: Cyclone[_, _, _, _], right: Cyclone[_, _, _, _]) {
+//    class Apply(flows: Flows[_, _, _, _]) {
+//      def apply(initState: flows.State, initHandler: flows.Handler): Cyclone[E, I, S, O] =
+//        new Landspout {
+//          override val flow = flows
+//          import flow._
+//          override protected val initialState: State     = initState
+//          override protected val initialHandler: Handler = initHandler
+//          override def bind(initialFlow: Flow[_]): Binder[El] = {
+//            ReactiveElement.bindCallback[El](_) { ctx =>
+//              ctx.thisNode.amend(
+//                super.bind(initialFlow),
+//                left.output.map(Left(_)) --> input,
+//                right.output.map(Right(_)) --> input,
+//                output.collect { case Left(v)  => v } --> left.input,
+//                output.collect { case Right(v) => v } --> right.input
+//              )
+//            }
+//          }
+//        }
+//    }
+//
+//    def apply[E <: Element, S]: Apply =
+//      new Apply(
+//        new Flows[E, Either[left.flow.Input, right.flow.Input], S, Either[left.flow.Output, right.flow.Output]] {}
+//      )
+//  }
 
 }
