@@ -20,10 +20,10 @@ trait Between {
         override protected lazy val initialHandler: Handler = inHandler
         override protected val initialFlow: Flow[_]         = initFlow
 
-        override def bind(initialFlow: cyclone.Flow[_]): Binder[E] =
+        override def bind(): Binder[E] =
           ReactiveElement.bindCallback(_) { ctx =>
             ctx.thisNode.amend(
-              super.bind(initialFlow),
+              super.bind(),
               left.output.map(Left(_)) --> input,
               right.output.map(Right(_)) --> input,
               output.collect { case Left(v)  => v } --> left.input,

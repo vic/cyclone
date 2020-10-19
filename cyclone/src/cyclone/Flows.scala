@@ -42,8 +42,8 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
     for {
       child <- spawn[X, Unit, X] { whirl =>
         // create cyclone using the underlying whirl types
-        whirl(())(whirl.emitOutput(_))
-      }(xs)
+        whirl((), xs.map(whirl.emitInput(_)))(whirl.emitOutput(_))
+      }
     } yield child.output
 
   def fromStream[X](fn: => EventStream[X]): Flow[X] =
@@ -75,10 +75,10 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
 
   def spawn[CI, CS, CO](
       c: Vortex.Cycle[E, CI, CS, CO] => Vortex[E, CI, CS, CO]
-  )(initialFlow: Flow[_] = EmptyFlow): Flow[Vortex[E, CI, CS, CO]] =
+  ): Flow[Vortex[E, CI, CS, CO]] =
     for {
       cyclone <- spin(c)
-      _       <- bind(cyclone.bind(initialFlow))
+      _       <- bind(cyclone.bind())
     } yield cyclone
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {

@@ -7,7 +7,7 @@ trait Vortex[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   val input: WriteBus[Input]
   val state: Signal[State]
   val output: EventStream[Output]
-  def bind(initialFlow: Flow[_] = EmptyFlow): Binder[El]
+  def bind(): Binder[El]
 }
 
 object Vortex extends Cyclone with Between {

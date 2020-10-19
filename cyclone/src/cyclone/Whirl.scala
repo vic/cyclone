@@ -125,12 +125,11 @@ private[cyclone] trait Whirl[E <: Element, I, S, O] extends Vortex[E, I, S, O] {
     outputStreamAndK.map(_._2)
   )
 
-  override def bind(initialFlow: Flow[_]): Binder[E] = {
+  override def bind(): Binder[E] = {
     ReactiveElement.bindCallback(_) { ctx =>
       ctx.thisNode.amend(
         loopbackEffects(ctx) --> flowBus.writer,
         inputBus.events.map(i => EmitInput(() => i)) --> flowBus.writer,
-        EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer,
         EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer
       )
     }
