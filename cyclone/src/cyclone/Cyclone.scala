@@ -2,27 +2,21 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-trait Cyclone {
+// Cyclones are circular Airstreams around an stateful Vortex
+trait Cyclone[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
+  val input: WriteBus[Input]
+  val state: Signal[State]
+  val output: EventStream[Output]
+  def bind(): Binder[El]
+}
 
-  case class Cycle[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
+object Cyclone extends Cycle with Between {
+  implicit def toWriteBus[I](cyclone: Cyclone[_, I, _, _]): WriteBus[I] =
+    cyclone.input
 
-    def apply(
-        initState: S,
-        initFlow: Flow[_] = emptyFlow
-    )(inHandler: Handler = handleNone): Vortex[E, I, S, O] =
-      new Landspout[E, I, S, O] {
-        override protected lazy val initialState: State     = initState
-        override protected lazy val initialHandler: Handler = inHandler
-        override protected val initialFlow: Flow[_]         = initFlow
-      }
+  implicit def toSignal[S](cyclone: Cyclone[_, _, S, _]): Signal[S] =
+    cyclone.state
 
-  }
-
-  case class Apply[E <: Element, I, S, O] private () {
-    def build(fn: Cycle[E, I, S, O] => Vortex[E, I, S, O]): Vortex[E, I, S, O] =
-      fn(Cycle[E, I, S, O]())
-  }
-
-  def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = Apply()
-
+  implicit def toEventStream[O](cyclone: Cyclone[_, _, _, O]): EventStream[O] =
+    cyclone.output
 }

@@ -69,13 +69,13 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
     element.map(_.amend(binder))
 
   def spin[WE <: Element, WI, WS, WO](
-      w: Vortex.Cycle[WE, WI, WS, WO] => Vortex[WE, WI, WS, WO]
-  ): Flow[Vortex[WE, WI, WS, WO]] =
-    pure(Vortex[WE, WI, WS, WO].build(w))
+      w: Cyclone.Cycle[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
+  ): Flow[Cyclone[WE, WI, WS, WO]] =
+    pure(Cyclone[WE, WI, WS, WO].build(w))
 
   def spawn[CI, CS, CO](
-      c: Vortex.Cycle[E, CI, CS, CO] => Vortex[E, CI, CS, CO]
-  ): Flow[Vortex[E, CI, CS, CO]] =
+      c: Cyclone.Cycle[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
+  ): Flow[Cyclone[E, CI, CS, CO]] =
     for {
       cyclone <- spin(c)
       _       <- bind(cyclone.bind())
@@ -96,7 +96,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to)
 
-  def tell(to: Vortex[_, _, _, _])(i: => to.Input): Flow[Unit] =
+  def tell(to: Cyclone[_, _, _, _])(i: => to.Input): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe

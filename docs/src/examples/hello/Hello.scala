@@ -7,8 +7,8 @@ object Hello {
 
   case class SayHello(to: String)
 
-  val vortex: Vortex[Div, SayHello, String, Nothing] =
-    Vortex[Div, SayHello, String, Nothing] build { cycle =>
+  val vortex: Cyclone[Div, SayHello, String, Nothing] =
+    Cyclone[Div, SayHello, String, Nothing] build { cycle =>
       cycle(initState = "World") {
         case SayHello(name) =>
           cycle.updateTo(name.toUpperCase())
