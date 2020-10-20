@@ -12,21 +12,14 @@ object Clock {
     import cycle._
 
     val times: EventStream[Date] =
-      EventStream.periodic(intervalMs = 1000).mapTo(new Date()).debugLog("TIME STREAM")
+      EventStream.periodic(intervalMs = 1000).mapTo(new Date())
 
-    val initFlow2: Flow[Unit] = for {
-      _    <- pure(dom.console.log("HELLO CLOCK"))
-      _    <- emitOutput(new Date())
+    val mainFlow: Flow[Unit] = for {
       time <- fromStream(times)
       _    <- emitOutput(time)
     } yield ()
 
-    val initFlow = pure {
-      dom.console.log("HELLO")
-      22
-    }
-
-    cycle(initState = (), initFlow)()
+    cycle(initState = (), mainFlow)()
   }
 
   val view: Div =

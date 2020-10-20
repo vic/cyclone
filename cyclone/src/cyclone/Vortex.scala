@@ -17,9 +17,8 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
 
   private lazy val flatMapFlow: EventStream[Flow[_]] =
     flowBus.events.collect {
-      case EmptyFlow        => EmptyFlow
       case x: FlatMap[_, _] => x
-      case x: Flow[_]       => x.flatMap[Nothing](_ => EmptyFlow)
+      case x: Flow[_]       => x.flatMap(_ => EmptyFlow)
     }
 
   protected lazy val streamFlattenStrategy: FlattenStrategy[EventStream, EventStream, EventStream] =
@@ -105,6 +104,12 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     flatMapFlow.collect(select).flatten
   }
 
+  private lazy val emptyFlows: EventStream[EmptyFlow.type] = {
+    flatMapFlow.collect {
+      case FlatMap(EmptyFlow, _) => EmptyFlow
+    }
+  }
+
   private def inContextEffects(c: MountContext[E]) = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
       case FlatMap(a: MountedContext, b: (Any => Flow[_])) =>
@@ -128,6 +133,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   override def bind(): Binder[E] = {
     ReactiveElement.bindCallback(_) { ctx =>
       ctx.thisNode.amend(
+        emptyFlows --> Observer.empty,
         loopbackEffects(ctx) --> flowBus.writer,
         inputBus.events.map(i => EmitInput(() => i)) --> flowBus.writer,
         EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer

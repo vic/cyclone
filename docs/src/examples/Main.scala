@@ -5,6 +5,13 @@ import org.scalajs.dom
 
 object Main extends scala.App {
 
-  render(dom.document.body, hello.Hello.view)
+  val view: Div =
+    div(
+      hello.Hello.view,
+      hr(),
+      clock.Clock.view
+    )
+
+  render(dom.document.body, view)
 
 }
