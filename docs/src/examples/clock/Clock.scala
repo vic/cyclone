@@ -9,7 +9,7 @@ import org.scalajs.dom
 object Clock {
 
   val clock: Cyclone[Div, Nothing, Unit, Date] =
-    Cyclone[Div, Nothing, Unit, Date] build { cycle =>
+    Cyclone[Div, Nothing, Unit, Date] spin { cycle =>
       import cycle._
 
       val times: EventStream[Date] =

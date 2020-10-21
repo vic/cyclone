@@ -2,9 +2,9 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-trait Cycle {
+trait Spin {
 
-  case class Cycle[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
+  case class Spin[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
 
     def apply(
         state: S,
@@ -24,8 +24,8 @@ trait Cycle {
   }
 
   case class Apply[E <: Element, I, S, O] private () {
-    def build(fn: Cycle[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
-      fn(Cycle[E, I, S, O]())
+    def spin(fn: Spin[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
+      fn(Spin[E, I, S, O]())
   }
 
   def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = Apply()

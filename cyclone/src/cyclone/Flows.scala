@@ -60,12 +60,12 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
     }
 
   def spin[WE <: Element, WI, WS, WO](
-      w: Cyclone.Cycle[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
+      w: Cyclone.Spin[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
   ): Flow[Cyclone[WE, WI, WS, WO]] =
-    pure(Cyclone[WE, WI, WS, WO].build(w))
+    pure(Cyclone[WE, WI, WS, WO].spin(w))
 
   def spawn[CI, CS, CO](
-      c: Cyclone.Cycle[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
+      c: Cyclone.Spin[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
   ): Flow[Cyclone[E, CI, CS, CO]] =
     for {
       cyclone <- spin(c)

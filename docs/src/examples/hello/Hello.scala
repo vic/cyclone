@@ -8,7 +8,7 @@ object Hello {
   case class SayHello(to: String)
 
   val hello: Cyclone[Div, SayHello, String, Nothing] =
-    Cyclone[Div, SayHello, String, Nothing] build { cycle =>
+    Cyclone[Div, SayHello, String, Nothing] spin { cycle =>
       cycle(state = "World", handler = {
         case SayHello(name) =>
           cycle.updateTo(name.toUpperCase())
