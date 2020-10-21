@@ -15,7 +15,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   private lazy val inputBus   = new EventBus[I]
   lazy val input: WriteBus[I] = inputBus.writer
 
-  protected val initialFlow: Flow[_] = EmptyFlow
+  protected val mainFlow: Flow[_] = EmptyFlow
 
   protected val inputHandler: Signal[Handler]
 
@@ -161,7 +161,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
         emptyFlows --> Observer.empty,
         loopbackEffects(ctx) --> flowBus.writer,
         inputBus.events.map(i => EmitInput(() => i)) --> flowBus.writer,
-        EventStream.fromValue(initialFlow, emitOnce = true) --> flowBus.writer
+        EventStream.fromValue(mainFlow, emitOnce = true) --> flowBus.writer
       )
     }
   }

@@ -22,6 +22,8 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def pure[X](fn: => X): Flow[X] =
     Pure(() => fn)
 
+  final val unit: Flow[Unit] = pure(())
+
   def current: Flow[S] =
     update(identity).map(_._2)
 
@@ -39,9 +41,8 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
 
   def intoStream[X](xs: => Flow[X]): Flow[EventStream[X]] =
     for {
-      child <- spawn[X, Unit, X] { whirl =>
-        // create cyclone using the underlying whirl types
-        whirl((), xs.map(whirl.emitInput(_)))(whirl.emitOutput(_))
+      child <- spawn[X, Unit, X] { cycle =>
+        cycle((), flow = xs.map(cycle.emitInput(_)), handler = cycle.emitOutput(_))
       }
     } yield child.output
 

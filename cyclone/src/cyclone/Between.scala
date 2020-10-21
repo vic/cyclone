@@ -12,13 +12,17 @@ trait Between {
       with Implicits {
 
     def apply(
-        initState: S,
-        initFlow: Flow[_] = emptyFlow
-    )(inHandler: Handler = handleNone): Cyclone[E, Either[LO, RO], S, Either[LI, RI]] =
+        state: S,
+        flow: Flow[_] = emptyFlow,
+        handler: Handler = handleNone
+    ): Cyclone[E, Either[LO, RO], S, Either[LI, RI]] = {
+      val s = state
+      val f = flow
+      val h = handler
       new Landspout[E, Either[LO, RO], S, Either[LI, RI]] {
-        override protected lazy val initialState: State     = initState
-        override protected lazy val initialHandler: Handler = inHandler
-        override protected val initialFlow: Flow[_]         = initFlow
+        override protected lazy val initialState: State     = s
+        override protected lazy val initialHandler: Handler = h
+        override protected val mainFlow: Flow[_]            = f
 
         override def bind(): Binder[E] =
           ReactiveElement.bindCallback(_) { ctx =>
@@ -31,6 +35,7 @@ trait Between {
             )
           }
       }
+    }
 
   }
 

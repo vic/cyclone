@@ -7,14 +7,19 @@ trait Cycle {
   case class Cycle[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
 
     def apply(
-        initState: S,
-        initFlow: Flow[_] = emptyFlow
-    )(inHandler: Handler = handleNone): Cyclone[E, I, S, O] =
+        state: S,
+        flow: Flow[_] = emptyFlow,
+        handler: Handler = handleNone
+    ): Cyclone[E, I, S, O] = {
+      val s = state
+      val f = flow
+      val h = handler
       new Landspout[E, I, S, O] {
-        override protected lazy val initialState: State     = initState
-        override protected lazy val initialHandler: Handler = inHandler
-        override protected val initialFlow: Flow[_]         = initFlow
+        override protected lazy val initialState: State     = s
+        override protected lazy val initialHandler: Handler = h
+        override protected val mainFlow: Flow[_]            = f
       }
+    }
 
   }
 
