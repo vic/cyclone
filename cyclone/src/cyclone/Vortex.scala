@@ -4,7 +4,11 @@ import com.raquo.airstream.features.FlattenStrategy.ConcurrentStreamStrategy
 import com.raquo.laminar.api.L._
 import com.raquo.laminar.nodes.ReactiveElement
 
+import scala.util.{Failure, Success, Try}
+
 private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O] {
+
+  private type Kont[X] = X => Flow[_]
 
   private lazy val flowBus = new EventBus[Flow[_]]
 
@@ -24,68 +28,88 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   protected lazy val streamFlattenStrategy: FlattenStrategy[EventStream, EventStream, EventStream] =
     ConcurrentStreamStrategy
 
-  private lazy val fromStreamFlows: EventStream[Flow[_]] = {
+  private lazy val fromStream: EventStream[Flow[_]] = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: FromStream[_], b: (Any => Flow[_])) =>
-        EventStream
-          .fromValue((), emitOnce = true)
-          .flatMap(_ => a.fn())(streamFlattenStrategy)
-          .map(_.flatMap(b))
+      case FlatMap(a: FromStream[_], b: Kont[Any]) =>
+        a.fn().map(_.flatMap(b))
     }
     flatMapFlow.collect(select).flatten(streamFlattenStrategy)
   }
 
-  private lazy val stateStreamAndK: EventStream[((S, S), Flow[_])] = {
-    def select: PartialFunction[Flow[_], EventStream[
-      ((S, S), Flow[_])
-    ]] = {
-      case FlatMap(a: UpdateState, b: (((S, S)) => Flow[_])) =>
-        EventStream
-          .fromValue((), emitOnce = true)
-          .sample(state)
-          .map(s => s -> a.fn(s))
-          .map(a => a -> b(a))
+  private lazy val nestedTryUpdate: EventStream[Flow[_]] = {
+    flatMapFlow.collect {
+      case FlatMap(x @ TryUpdate(y @ TryUpdate(_)), k: Kont[Try[Try[Any]]]) =>
+        FlatMap(y, (v: Try[Any]) => k(Success(v)))
     }
-    flatMapFlow.collect(select).flatten
   }
 
-  protected lazy val stateStream: EventStream[S] =
-    stateStreamAndK.map(_._1._2)
+  private def updateStateEffect(u: UpdateState): EventStream[(S, S)] =
+    EventStream
+      .fromValue((), emitOnce = true)
+      .sample(state)
+      .map(s => s -> u.fn(s))
 
-  private lazy val inputHandlerStreamAndK: EventStream[((Handler, Handler), Flow[_])] = {
-    def select: PartialFunction[Flow[_], EventStream[((Handler, Handler), Flow[_])]] = {
-      case FlatMap(a: UpdateHandler @unchecked, b: (((Handler, Handler)) => Flow[_])) =>
-        EventStream
-          .fromValue((), emitOnce = true)
-          .sample(inputHandler)
-          .map(h => h -> a.fn(h))
-          .map(a => a -> b(a))
-    }
-    flatMapFlow.collect(select).flatten
+  private lazy val updateState: EventStream[(Option[(S, S)], Flow[_])] = {
+    flatMapFlow.collect {
+      case FlatMap(u: UpdateState, k: Kont[(S, S)]) =>
+        updateStateEffect(u).map(v => Some(v) -> k(v))
+      case FlatMap(TryUpdate(u: UpdateState), k: Kont[Try[(S, S)]]) =>
+        updateStateEffect(u).recoverToTry.map {
+          case Failure(exception) =>
+            None -> k(Failure(exception))
+          case Success(v) =>
+            Some(v) -> k(v)
+        }
+    }.flatten
   }
 
-  protected lazy val inputHandlerStream: EventStream[Handler] =
-    inputHandlerStreamAndK.map(_._1._2)
+  protected lazy val stateChanges: EventStream[S] =
+    updateState.collect {
+      case (Some(_ -> newState), _) => newState
+    }
 
-  private lazy val outputStreamAndK: EventStream[(O, Flow[_])] = {
+  private def updateHandlerEffect(u: UpdateHandler): EventStream[(Handler, Handler)] =
+    EventStream
+      .fromValue((), emitOnce = true)
+      .sample(inputHandler)
+      .map(h => h -> u.fn(h))
+
+  private lazy val updateHandler: EventStream[(Option[(Handler, Handler)], Flow[_])] = {
+    flatMapFlow.collect {
+      case FlatMap(u: UpdateHandler @unchecked, k: Kont[(Handler, Handler)]) =>
+        updateHandlerEffect(u).map(v => Some(v) -> k(v))
+      case FlatMap(TryUpdate(u: UpdateHandler @unchecked), k: Kont[Try[(Handler, Handler)]]) =>
+        updateHandlerEffect(u).recoverToTry.map {
+          case Failure(exception) =>
+            None -> k(Failure(exception))
+          case Success(v) =>
+            Some(v) -> k(v)
+        }
+    }.flatten
+  }
+
+  protected lazy val handlerChanges: EventStream[Handler] =
+    updateHandler.collect {
+      case (Some(_ -> newHandler), _) => newHandler
+    }
+
+  private lazy val emitOutput: EventStream[(O, Flow[_])] = {
     def select: PartialFunction[Flow[_], EventStream[(O, Flow[_])]] = {
-      case FlatMap(a: EmitOutput, b: (O => Flow[_])) =>
+      case FlatMap(a: EmitOutput, b: Kont[O]) =>
         EventStream
-          .fromValue((), emitOnce = true)
-          .map(_ => a.fn())
+          .fromTry(Try(a.fn()), emitOnce = true)
           .map(a => a -> b(a))
     }
     flatMapFlow.collect(select).flatten
   }
 
-  override lazy val output: EventStream[O] = outputStreamAndK.map(_._1)
+  override lazy val output: EventStream[O] = emitOutput.map(_._1)
 
-  private lazy val handledInputs = {
+  private lazy val emitInput = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: EmitInput, b: (Input => Flow[_])) =>
+      case FlatMap(a: EmitInput, b: Kont[I]) =>
         EventStream
-          .fromValue((), emitOnce = true)
-          .map(_ => a.fn())
+          .fromTry(Try(a.fn()), emitOnce = true)
           .withCurrentValueOf(inputHandler)
           .filter { case (input, handler) => handler.isDefinedAt(input) }
           .map2((input, handler) => handler(input).flatMap(_ => b(input)))
@@ -93,9 +117,9 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     flatMapFlow.collect(select).flatten
   }
 
-  private lazy val handledPures = {
+  private lazy val pure = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: Pure[_], b: (Any => Flow[_])) =>
+      case FlatMap(a: Pure[_], b: Kont[Any]) =>
         EventStream
           .fromValue((), emitOnce = true)
           .map(_ => a.fn())
@@ -121,13 +145,14 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   }
 
   private def loopbackEffects(c: MountContext[E]): EventStream[Flow[_]] = EventStream.merge(
-    handledPures,
-    handledInputs,
+    pure,
+    emitInput,
     inContextEffects(c),
-    fromStreamFlows,
-    stateStreamAndK.map(_._2),
-    inputHandlerStreamAndK.map(_._2),
-    outputStreamAndK.map(_._2)
+    fromStream,
+    updateState.map(_._2),
+    updateHandler.map(_._2),
+    emitOutput.map(_._2),
+    nestedTryUpdate
   )
 
   override def bind(): Binder[E] = {
