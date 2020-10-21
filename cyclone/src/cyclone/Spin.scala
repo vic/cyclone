@@ -6,13 +6,27 @@ trait Spin {
 
   case class Spin[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
 
+    def apply(state: S): Cyclone[E, I, S, O] = apply(state, handleNone, emptyFlow)
+
+    def apply(state: S, handler: (I => Flow[_])): Cyclone[E, I, S, O] =
+      apply(state, handleAll(handler), emptyFlow)
+
+    def apply(state: S, handler: Handler): Cyclone[E, I, S, O] =
+      apply(state, handler, emptyFlow)
+
+    def apply(state: S, mainFlow: Flow[_]): Cyclone[E, I, S, O] =
+      apply(state, handleNone, mainFlow)
+
+    def apply(state: S, handler: (I => Flow[_]), mainFlow: Flow[_]): Cyclone[E, I, S, O] =
+      apply(state, handleAll(handler), mainFlow)
+
     def apply(
         state: S,
-        flow: Flow[_] = emptyFlow,
-        handler: Handler = handleNone
+        handler: Handler,
+        mainFlow: Flow[_]
     ): Cyclone[E, I, S, O] = {
       val s = state
-      val f = flow
+      val f = mainFlow
       val h = handler
       new Landspout[E, I, S, O] {
         override protected lazy val initialState: State     = s
@@ -24,10 +38,10 @@ trait Spin {
   }
 
   case class Apply[E <: Element, I, S, O] private () {
-    def spin(fn: Spin[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
+    def apply[X](fn: Spin[E, I, S, O] => X): X =
       fn(Spin[E, I, S, O]())
   }
 
-  def apply[E <: Element, I, S, O]: Apply[E, I, S, O] = Apply()
+  def spin[E <: Element, I, S, O]: Apply[E, I, S, O] = Apply()
 
 }

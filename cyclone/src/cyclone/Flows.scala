@@ -2,6 +2,8 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
+import scala.util.Try
+
 trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlows[E, I, S, O] {
 
   final val emptyFlow: Flow[Nothing] = EmptyFlow
@@ -21,6 +23,9 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
 
   def pure[X](fn: => X): Flow[X] =
     Pure(() => fn)
+
+  def tryEffect[X](fn: => X): Flow[Try[X]] =
+    Pure(() => Try(fn))
 
   final val unit: Flow[Unit] = pure(())
 
@@ -42,7 +47,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def intoStream[X](xs: => Flow[X]): Flow[EventStream[X]] =
     for {
       child <- spawn[X, Unit, X] { cycle =>
-        cycle((), flow = xs.map(cycle.emitInput(_)), handler = cycle.emitOutput(_))
+        cycle(state = (), mainFlow = xs.map(cycle.emitInput(_)), handler = cycle.emitOutput(_))
       }
     } yield child.output
 
@@ -62,7 +67,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def spin[WE <: Element, WI, WS, WO](
       w: Cyclone.Spin[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
   ): Flow[Cyclone[WE, WI, WS, WO]] =
-    pure(Cyclone[WE, WI, WS, WO].spin(w))
+    pure(Cyclone.spin[WE, WI, WS, WO](w))
 
   def spawn[CI, CS, CO](
       c: Cyclone.Spin[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]

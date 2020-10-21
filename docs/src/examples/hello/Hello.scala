@@ -8,11 +8,15 @@ object Hello {
   case class SayHello(to: String)
 
   val hello: Cyclone[Div, SayHello, String, Nothing] =
-    Cyclone[Div, SayHello, String, Nothing] spin { cycle =>
-      cycle(state = "World", handler = {
+    Cyclone.spin[Div, SayHello, String, Nothing] { cycle =>
+      import cycle._
+
+      def onInput(input: Input) = input match {
         case SayHello(name) =>
-          cycle.updateTo(name.toUpperCase())
-      })
+          updateTo(name.toUpperCase())
+      }
+
+      cycle(state = "World", onInput(_))
     }
 
   val view: Div =

@@ -9,18 +9,18 @@ import org.scalajs.dom
 object Clock {
 
   val clock: Cyclone[Div, Nothing, Unit, Date] =
-    Cyclone[Div, Nothing, Unit, Date] spin { cycle =>
+    Cyclone.spin[Div, Nothing, Unit, Date] { cycle =>
       import cycle._
 
       val times: EventStream[Date] =
         EventStream.periodic(intervalMs = 1000).mapTo(new Date())
 
       val mainFlow: Flow[Unit] = for {
-        time <- fromStream(times)
-        _    <- emitOutput(time)
+        time: Date <- fromStream(times)
+        _          <- emitOutput(time)
       } yield ()
 
-      cycle(state = (), mainFlow)
+      cycle(state = (), mainFlow = mainFlow)
     }
 
   val view: Div =
