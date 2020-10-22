@@ -23,7 +23,10 @@ trait Types {
   type Handler[I] = PartialFunction[I, Flow[_]]
 
   sealed trait Flow[+X] {
-    def flatMap[Y](f: X => Flow[Y]): Flow[Y] = FlatMap[X, Y](this, f)
+    def flatMap[Y](f: X => Flow[Y]): Flow[Y] = this match {
+      case FlatMap(a, b) => FlatMap(a, b(_: Any).flatMap(f))
+      case self          => FlatMap[X, Y](self, f)
+    }
 
     def map[Y](f: X => Y): Flow[Y] = FlatMap[X, Y](this, x => Pure[Y](() => f(x)))
 

@@ -21,8 +21,14 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
 
   private lazy val flatMapFlow: EventStream[Flow[_]] =
     flowBus.events.collect {
-      case x: FlatMap[_, _] => x
-      case x: Flow[_]       => x.flatMap(_ => EmptyFlow)
+      case FlatMap(FlatMap(a, b: Kont[Any]), k: Kont[Any]) => FlatMap(a, b(_: Any).flatMap(k))
+      case x: FlatMap[_, _]                                => x
+      case x: Flow[_]                                      => x.flatMap(_ => EmptyFlow)
+    }
+
+  private lazy val nestedFlatMap: EventStream[Flow[_]] =
+    flatMapFlow.collect {
+      case FlatMap(FlatMap(a, b: Kont[Any]), k: Kont[Any]) => FlatMap(a, b(_: Any).flatMap(k))
     }
 
   protected lazy val streamFlattenStrategy: FlattenStrategy[EventStream, EventStream, EventStream] =
@@ -136,7 +142,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
 
   private def inContextEffects(c: MountContext[E]) = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: MountedContext, b: (Any => Flow[_])) =>
+      case FlatMap(a: MountedContext, b: Kont[MountContext[E]]) =>
         EventStream
           .fromValue(c, emitOnce = true)
           .map(b)
@@ -152,7 +158,8 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     updateState.map(_._2),
     updateHandler.map(_._2),
     emitOutput.map(_._2),
-    nestedTryUpdate
+    nestedTryUpdate,
+    nestedFlatMap
   )
 
   override def bind(): Binder[E] = {

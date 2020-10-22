@@ -9,7 +9,9 @@ object Main extends scala.App {
     div(
       hello.Hello.view,
       hr(),
-      clock.Clock.view
+      clock.Clock.view,
+      hr(),
+      jquery_interop.DatePicker.view
     )
 
   render(dom.document.body, view)
