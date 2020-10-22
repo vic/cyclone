@@ -19,7 +19,7 @@ trait ElementFlows[E <: Element, I, S, O] { self: Flows[E, I, S, O] =>
   def bind(binder: => Binder[E], active: Signal[Boolean] = trueSignal): Flow[E] =
     element.flatMap(bindOn(_, binder, active))
 
-  def bindOn[EL <: Element](el: EL, binder: Binder[EL], activeOn: Signal[Boolean]): Flow[EL] =
+  def bindOn[EL <: Element](el: EL, binder: => Binder[EL], activeOn: Signal[Boolean] = trueSignal): Flow[EL] =
     value {
       var sub: Option[DynamicSubscription]   = None
       def on(): Option[DynamicSubscription]  = sub.orElse(Some(binder.bind(el)))
