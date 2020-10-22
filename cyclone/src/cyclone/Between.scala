@@ -6,17 +6,17 @@ import com.raquo.laminar.nodes.ReactiveElement
 trait Between {
 
   def between[E <: Element, S, LI, LO, RI, RO](
-      left: Cyclone[_ <: Element, LI, _, LO],
-      right: Cyclone[_ <: Element, RI, _, RO]
+      left: Cyclone.IO[LI, LO],
+      right: Cyclone.IO[RI, RO]
   )(
       fn: Cyclone.Spin[E, Either[LO, RO], S, Either[LI, RI]] => Cyclone[E, Either[LO, RO], S, Either[LI, RI]]
   ): Cyclone[E, Either[LO, RO], S, Either[LI, RI]] =
     bindBetween(left, fn(Cyclone.Spin()), right)
 
   private def bindBetween[E <: Element, S, LI, LO, RI, RO](
-      left: Cyclone[_ <: Element, LI, _, LO],
+      left: Cyclone.IO[LI, LO],
       center: Cyclone[E, Either[LO, RO], S, Either[LI, RI]],
-      right: Cyclone[_ <: Element, RI, _, RO]
+      right: Cyclone.IO[RI, RO]
   ): Cyclone[E, Either[LO, RO], S, Either[LI, RI]] =
     new Cyclone[E, Either[LO, RO], S, Either[LI, RI]] {
       override val input: WriteBus[Input]      = center.input

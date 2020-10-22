@@ -6,13 +6,24 @@ trait Spin {
 
   case class Spin[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
 
+    def apply()(implicit ev: Unit =:= S): Cyclone[E, I, S, O] = apply(state = ())
+
     def apply(state: S): Cyclone[E, I, S, O] = apply(state, handleNone, emptyFlow)
+
+    def apply(handler: (I => Flow[_]))(implicit ev: Unit =:= S): Cyclone[E, I, S, O] =
+      apply(state = (), handler)
 
     def apply(state: S, handler: (I => Flow[_])): Cyclone[E, I, S, O] =
       apply(state, handleAll(handler), emptyFlow)
 
+    def apply(handler: Handler)(implicit ev: Unit =:= S): Cyclone[E, I, S, O] =
+      apply(state = (), handler)
+
     def apply(state: S, handler: Handler): Cyclone[E, I, S, O] =
       apply(state, handler, emptyFlow)
+
+    def apply(mainFlow: Flow[_])(implicit ev: Unit =:= S): Cyclone[E, I, S, O] =
+      apply(state = (), mainFlow)
 
     def apply(state: S, mainFlow: Flow[_]): Cyclone[E, I, S, O] =
       apply(state, handleNone, mainFlow)

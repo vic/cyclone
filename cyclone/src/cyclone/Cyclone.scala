@@ -10,7 +10,9 @@ trait Cyclone[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   def bind(): Binder[El]
 }
 
-object Cyclone extends Spin with Pair with Between {
+object Cyclone extends Spin with Pair with Between with Channel {
+  type IO[I, O] = Cyclone[_ <: Element, I, _, O]
+
   implicit def toWriteBus[I](cyclone: Cyclone[_, I, _, _]): WriteBus[I] =
     cyclone.input
 

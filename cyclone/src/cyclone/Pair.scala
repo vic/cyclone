@@ -6,13 +6,13 @@ import com.raquo.laminar.nodes.ReactiveElement
 trait Pair {
 
   def paired[E <: Element, I, S, O](
-      other: Cyclone[_ <: Element, O, _, I]
+      other: Cyclone.IO[O, I]
   )(fn: Cyclone.Spin[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
     bindPair(fn(Cyclone.Spin()), other)
 
   private def bindPair[E <: Element, I, S, O](
       self: Cyclone[E, I, S, O],
-      other: Cyclone[_ <: Element, O, _, I]
+      other: Cyclone.IO[O, I]
   ): Cyclone[E, I, S, O] =
     new Cyclone[E, I, S, O] {
       override val input: WriteBus[Input]      = self.input
