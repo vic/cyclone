@@ -8,6 +8,7 @@ import org.scalajs.dom.html
 
 import scala.scalajs.js
 
+// Example using https://nightcatsama.github.io/vue-slider-component/#/
 object Slider {
 
   // Laminar helpers for using vue tags and attributes
