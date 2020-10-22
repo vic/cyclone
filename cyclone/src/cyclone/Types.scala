@@ -28,17 +28,19 @@ trait Types {
       case self          => FlatMap[X, Y](self, f)
     }
 
-    def tapEffect(f: X => Unit): Flow[X] = tap(x => Pure(() => f(x)))
+    def tapEffect(f: X => Unit): Flow[X] = tap(x => Value(() => f(x)))
     def tap(f: X => Flow[_]): Flow[X]    = flatMap { x => f(x).mapTo(x) }
 
-    def map[Y](f: X => Y): Flow[Y] = FlatMap[X, Y](this, x => Pure[Y](() => f(x)))
+    def map[Y](f: X => Y): Flow[Y] = FlatMap[X, Y](this, x => Value[Y](() => f(x)))
 
     def mapTo[Y](f: => Y): Flow[Y] = map(_ => f)
 
     def withFilter(p: X => Boolean): Flow[X] = FlatMap[X, X](
       this,
-      x => if (p(x)) Pure[X](() => x) else EmptyFlow.map[X](_ => ???)
+      x => if (p(x)) Value[X](() => x) else EmptyFlow.map[X](_ => ???)
     )
+
+    def compose[Y](f: Flow[X] => Flow[Y]): Flow[Y] = f(this)
 
     def liftToTry: Flow[Try[X]]
     def lowerFromTry[Y](implicit ev: X <:< Try[Y]): Flow[Y] = map {
@@ -48,17 +50,17 @@ trait Types {
   }
 
   case object EmptyFlow extends Flow[Nothing] {
-    override def liftToTry: Flow[Try[Nothing]] = Pure(() => Try(???))
+    override def liftToTry: Flow[Try[Nothing]] = Value(() => Try(???))
   }
 
-  case class Pure[+X] private[cyclone] (fn: () => X) extends Flow[X] {
-    override def liftToTry: Flow[Try[X]] = Pure(() => Try(fn()))
+  case class Value[+X] private[cyclone] (fn: () => X) extends Flow[X] {
+    override def liftToTry: Flow[Try[X]] = Value(() => Try(fn()))
   }
 
   case class FlatMap[X, +Y] private[cyclone] (a: Flow[X], b: X => Flow[Y]) extends Flow[Y] {
     override def liftToTry: Flow[Try[Y]] =
       a.liftToTry.flatMap {
-        case Failure(exception) => Pure(() => Failure(exception))
+        case Failure(exception) => Value(() => Failure(exception))
         case Success(value) =>
           b(value).liftToTry
       }
@@ -68,7 +70,7 @@ trait Types {
     override def liftToTry: Flow[Try[X]] =
       FromStream(() =>
         fn().recoverToTry.map {
-          case Failure(exception) => Pure(() => Failure(exception))
+          case Failure(exception) => Value(() => Failure(exception))
           case Success(flow)      => flow.liftToTry
         }
       )
@@ -76,16 +78,16 @@ trait Types {
 
   case class EmitInput[I] private[cyclone] (fn: () => I) extends Flow[I] {
     override def liftToTry: Flow[Try[I]] =
-      Pure[I](() => fn()).liftToTry.flatMap {
-        case Failure(exception) => Pure(() => Failure(exception))
+      Value[I](() => fn()).liftToTry.flatMap {
+        case Failure(exception) => Value(() => Failure(exception))
         case Success(i)         => EmitInput[I](() => i).mapTo(Success(i))
       }
   }
 
   case class EmitOutput[O] private[cyclone] (fn: () => O) extends Flow[O] {
     override def liftToTry: Flow[Try[O]] =
-      Pure[O](() => fn()).liftToTry.flatMap {
-        case Failure(exception) => Pure(() => Failure(exception))
+      Value[O](() => fn()).liftToTry.flatMap {
+        case Failure(exception) => Value(() => Failure(exception))
         case Success(o)         => EmitOutput[O](() => o).mapTo(Success(o))
       }
   }

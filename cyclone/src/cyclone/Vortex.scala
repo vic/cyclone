@@ -125,7 +125,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
 
   private lazy val pure = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: Pure[_], b: Kont[Any]) =>
+      case FlatMap(a: Value[_], b: Kont[Any]) =>
         EventStream
           .fromValue((), emitOnce = true)
           .map(_ => a.fn())

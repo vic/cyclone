@@ -2,8 +2,6 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-import scala.util.Try
-
 trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlows[E, I, S, O] {
 
   final val emptyFlow: Flow[Nothing] = EmptyFlow
@@ -21,21 +19,18 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def emitOutput(output: => O): Flow[O] =
     EmitOutput(() => output)
 
-  def pure[X](fn: => X): Flow[X] =
-    Pure(() => fn)
+  def value[X](fn: => X): Flow[X] =
+    Value(() => fn)
 
-  def tryEffect[X](fn: => X): Flow[Try[X]] =
-    Pure(() => Try(fn))
+  final val unit: Flow[Unit] = value(())
 
-  final val unit: Flow[Unit] = pure(())
+  def currentState: Flow[S] =
+    updateState(identity).map(_._2)
 
-  def current: Flow[S] =
-    update(identity).map(_._2)
-
-  def update(fn: S => S): Flow[(S, S)] =
+  def updateState(fn: S => S): Flow[(S, S)] =
     UpdateState(fn)
 
-  def updateTo(state: => S): Flow[(S, S)] =
+  def updateStateTo(state: => S): Flow[(S, S)] =
     UpdateState((_: S) => state)
 
   def updateHandler(fn: Handler => Handler): Flow[(Handler, Handler)] =
@@ -44,25 +39,26 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def updateHandlerTo(fn: => Handler): Flow[(Handler, Handler)] =
     UpdateHandler((_: Handler) => fn)
 
-  def intoStream[X](xs: => Flow[X]): Flow[EventStream[X]] =
+  def intoStream[X](xs: => Flow[X], active: Signal[Boolean] = trueSignal): Flow[EventStream[X]] =
     for {
-      child <- spawn[X, Unit, X] { cycle =>
+      child <- spawn[X, Unit, X]({ cycle =>
         cycle(state = (), mainFlow = xs.map(cycle.emitInput(_)), handler = cycle.emitOutput(_))
-      }
+      }, active)
     } yield child.output
 
   def fromStream[X](fn: => EventStream[X]): Flow[X] =
-    fromFlowStream(fn.map(pure(_)))
+    fromFlowStream(fn.map(value(_)))
 
   def fromFlowStream[X](fn: => EventStream[Flow[X]]): Flow[X] =
     FromStream[X](() => fn)
 
-  def makeCallback[X]: Flow[((X => Unit), Flow[X])] = pure {
-    val bus             = new EventBus[X]
-    val cb: (X => Unit) = bus.writer.onNext
-    val xs: Flow[X]     = fromStream(bus.events)
-    cb -> xs
-  }
+  def makeCallback[X](active: Signal[Boolean] = trueSignal): Flow[((X => Unit), Flow[X])] =
+    value {
+      val bus             = new EventBus[X]
+      val cb: (X => Unit) = bus.writer.onNext
+      val xs: Flow[X]     = fromStream(bus.events)
+      cb -> xs
+    }
 
   def fromCallback[X](cb: => ((X => Unit) => Unit)): Flow[X] =
     fromStream {
@@ -74,14 +70,15 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def spin[WE <: Element, WI, WS, WO](
       w: Cyclone.Spin[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
   ): Flow[Cyclone[WE, WI, WS, WO]] =
-    pure(Cyclone.spin[WE, WI, WS, WO](w))
+    value(Cyclone.spin[WE, WI, WS, WO](w))
 
   def spawn[CI, CS, CO](
-      c: Cyclone.Spin[E, CI, CS, CO] => Cyclone[E, CI, CS, CO]
+      c: Cyclone.Spin[E, CI, CS, CO] => Cyclone[E, CI, CS, CO],
+      active: Signal[Boolean] = trueSignal
   ): Flow[Cyclone[E, CI, CS, CO]] =
     for {
       cyclone <- spin(c)
-      _       <- bind(cyclone.bind())
+      _       <- bind(cyclone.bind(), active)
     } yield cyclone
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {
@@ -94,10 +91,10 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   }
 
   def sendAll[X](events: => EventStream[X], to: => WriteBus[X], active: => Signal[Boolean] = trueSignal): Flow[Unit] =
-    bind(events.withCurrentValueOf(active).collect { case (x, true) => x } --> to).mapTo(())
+    bind(events --> to, active).mapTo(())
 
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
-    sendAll(events.compose(onlyFirst), to)
+    sendAll(events.compose(onlyFirst), to, active = events.mapTo(false).startWith(true))
 
   def tell(to: Cyclone[_, _, _, _])(i: => to.Input): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)

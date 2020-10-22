@@ -6,6 +6,8 @@ import com.raquo.laminar.emitter.EventPropTransformation
 import com.raquo.laminar.nodes.ReactiveElement
 import org.scalajs.dom
 
+import scala.util.Try
+
 trait ElementFlows[E <: Element, I, S, O] { self: Flows[E, I, S, O] =>
 
   def context: Flow[MountContext[E]] =
@@ -14,10 +16,20 @@ trait ElementFlows[E <: Element, I, S, O] { self: Flows[E, I, S, O] =>
   def element: Flow[E] =
     context.map(_.thisNode)
 
-  def bind(binder: => Binder[E]): Flow[E] =
-    element.map(_.amend(binder))
+  def bind(binder: => Binder[E], active: Signal[Boolean] = trueSignal): Flow[E] =
+    element.flatMap(bindOn(_, binder, active))
 
-  private def asReactiveElement[Ref <: dom.Element](el: Ref) = {
+  def bindOn[EL <: Element](el: EL, binder: Binder[EL], activeOn: Signal[Boolean]): Flow[EL] =
+    value {
+      var sub: Option[DynamicSubscription]   = None
+      def on(): Option[DynamicSubscription]  = sub.orElse(Some(binder.bind(el)))
+      def off(): Option[DynamicSubscription] = sub.flatMap { s => Try(s.kill()); None }
+      def toggle(active: Boolean): Unit      = sub = if (active) on() else off()
+      val toggledSignal: Signal[Unit]        = activeOn.composeAll(_.map(toggle), _.map(toggle))
+      el.amend(toggledSignal --> Observer.empty, onUnmountCallback(_ => off()))
+    }
+
+  private def asReactiveElement[Ref <: dom.Element](el: Ref): ReactiveElement[Ref] = {
     new ReactiveElement[Ref] {
       override val tag: Tag[ReactiveElement[Ref]] = new Tag(el.tagName, false)
       override val ref: Ref                       = el
@@ -25,13 +37,13 @@ trait ElementFlows[E <: Element, I, S, O] { self: Flows[E, I, S, O] =>
   }
 
   def elementById[Ref <: dom.Element](id: String): Flow[ReactiveElement[Ref]] =
-    pure {
+    value {
       val el = dom.document.getElementById(id)
       asReactiveElement[Ref](el.asInstanceOf[Ref])
     }
 
   def elementBySelector[Ref <: dom.Element](selector: String): Flow[ReactiveElement[Ref]] =
-    pure {
+    value {
       val el = dom.document.querySelector(selector)
       asReactiveElement[Ref](el.asInstanceOf[Ref])
     }

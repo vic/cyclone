@@ -12,14 +12,14 @@ import scala.scalajs.js
 object Slider {
 
   // Laminar helpers for using vue tags and attributes
-  object vueTags extends HtmlBuilders {
+  object vueHtml extends HtmlBuilders {
     def vAttr(name: String): HtmlAttr[String] = stringHtmlAttr(s"v-${name}")
     val vModel: HtmlAttr[String]              = vAttr("model")
 
     val vueSlider: HtmlTag[html.Element] = htmlTag[dom.html.Element](tagName = "vue-slider", void = false)
   }
 
-  import vueTags._
+  import vueHtml._
 
   // In this example we use js.Dynamic to interact with the js world.
   import js.Dynamic._
@@ -52,11 +52,11 @@ object Slider {
 
       val mainFlow: Flow[Unit] =
         for {
-          (onChange, changes: Flow[Int]) <- makeCallback[Int]
+          (onChange, changes: Flow[Int]) <- makeCallback[Int]()
           vue <- element
             .map(_.amend(vueView))
             .map(el => vueInit(el.ref, onChange))
-          _ <- changes.flatMap(updateTo(_))
+          _ <- changes.flatMap(updateStateTo(_))
         } yield ()
 
       cycle(initialState, mainFlow)

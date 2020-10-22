@@ -13,7 +13,7 @@ object Hello {
 
       def onInput(input: Input) = input match {
         case SayHello(name) =>
-          updateTo(name.toUpperCase())
+          updateStateTo(name.toUpperCase())
       }
 
       cycle(state = "World", onInput(_))

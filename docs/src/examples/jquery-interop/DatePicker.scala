@@ -35,7 +35,7 @@ object DatePicker {
           val pluginOptions = literal(opens = "left", startDate = startDate, endDate = endDate)
           jq.daterangepicker(pluginOptions, { (start: Moment, end: Moment) => cb(start -> end) })
         }
-        _ <- updateTo(range)
+        _ <- updateStateTo(range)
       } yield ()
 
       cycle(initialState, mainFlow)
