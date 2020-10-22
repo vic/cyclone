@@ -28,6 +28,9 @@ trait Types {
       case self          => FlatMap[X, Y](self, f)
     }
 
+    def tapEffect(f: X => Unit): Flow[X] = tap(x => Pure(() => f(x)))
+    def tap(f: X => Flow[_]): Flow[X]    = flatMap { x => f(x).mapTo(x) }
+
     def map[Y](f: X => Y): Flow[Y] = FlatMap[X, Y](this, x => Pure[Y](() => f(x)))
 
     def mapTo[Y](f: => Y): Flow[Y] = map(_ => f)

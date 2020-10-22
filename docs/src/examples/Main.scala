@@ -11,7 +11,9 @@ object Main extends scala.App {
       hr(),
       clock.Clock.view,
       hr(),
-      jquery_interop.DatePicker.view
+      jquery_interop.DatePicker.view,
+      hr(),
+      vue_interop.Slider.view
     )
 
   render(dom.document.body, view)

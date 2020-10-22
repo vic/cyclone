@@ -57,11 +57,18 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def fromFlowStream[X](fn: => EventStream[Flow[X]]): Flow[X] =
     FromStream[X](() => fn)
 
+  def makeCallback[X]: Flow[((X => Unit), Flow[X])] = pure {
+    val bus             = new EventBus[X]
+    val cb: (X => Unit) = bus.writer.onNext
+    val xs: Flow[X]     = fromStream(bus.events)
+    cb -> xs
+  }
+
   def fromCallback[X](cb: => ((X => Unit) => Unit)): Flow[X] =
-    FromStream[X] { () =>
+    fromStream {
       val bus = new EventBus[X]
       cb(bus.writer.onNext)
-      bus.events.map(pure[X](_))
+      bus.events
     }
 
   def spin[WE <: Element, WI, WS, WO](
