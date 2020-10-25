@@ -23,9 +23,9 @@ trait Between {
       override val state: Signal[State]        = center.state
       override val output: EventStream[Output] = center.output
 
-      override def bind(active: Signal[Boolean]): Binder[El] =
-        ReactiveElement.bindCallback(_) { ctx =>
-          ctx.thisNode.amend(
+      override def bind(active: Signal[Boolean]): Mod[E] =
+        inContext[E] { el =>
+          el.amend(
             center.bind(),
             active.bindBus(left.output.map(Left(_)), input),
             active.bindBus(right.output.map(Right(_)), input),

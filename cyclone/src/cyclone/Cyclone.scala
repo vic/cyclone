@@ -8,11 +8,11 @@ trait Cyclone[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] {
   val state: Signal[State]
   val output: EventStream[Output]
 
-  def bind(active: Signal[Boolean]): Binder[El]
-  final def bind(): Binder[El] = bind(EventStream.empty.startWith(true))
+  def bind(active: Signal[Boolean]): Mod[El]
+  final def bind(): Mod[El] = bind(EventStream.empty.startWith(true))
 }
 
-object Cyclone extends Spin with Pair with Between with Channel {
+object Cyclone extends Spin with Pair with Between with Topic {
   type IO[I, O] = Cyclone[_ <: Element, I, _, O]
 
   implicit def toWriteBus[I](cyclone: Cyclone[_, I, _, _]): WriteBus[I] =
