@@ -162,13 +162,13 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     nestedFlatMap
   )
 
-  override def bind(): Binder[E] = {
+  override def bind(active: Signal[Boolean]): Binder[E] = {
     ReactiveElement.bindCallback(_) { ctx =>
       ctx.thisNode.amend(
-        emptyFlows --> Observer.empty,
-        loopbackEffects(ctx) --> flowBus.writer,
-        inputBus.events.map(i => EmitInput(() => i)) --> flowBus.writer,
-        EventStream.fromValue(mainFlow, emitOnce = true) --> flowBus.writer
+        active.bindObserver(emptyFlows, Observer.empty),
+        active.bindBus(loopbackEffects(ctx), flowBus.writer),
+        active.bindBus(inputBus.events.map(i => EmitInput(() => i)), flowBus.writer),
+        active.bindBus(EventStream.fromValue(mainFlow, emitOnce = false), flowBus.writer)
       )
     }
   }
