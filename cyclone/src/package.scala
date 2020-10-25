@@ -1,1 +1,1 @@
-package object cyclone extends Types
+package object cyclone extends Types with Implicits

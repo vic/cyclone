@@ -16,18 +16,17 @@ trait ElementFlows[E <: Element, I, S, O] { self: Flows[E, I, S, O] =>
   def element: Flow[E] =
     context.map(_.thisNode)
 
-  def bind(binder: => Binder[E], active: Signal[Boolean] = trueSignal): Flow[E] =
-    element.flatMap(bindOn(_, binder, active))
+  def bind(binder: => Binder[E]): Flow[E] =
+    element.map(_.amend(binder))
 
-  def bindOn[EL <: Element](el: EL, binder: => Binder[EL], activeOn: Signal[Boolean] = trueSignal): Flow[EL] =
-    value {
-      var sub: Option[DynamicSubscription]   = None
-      def on(): Option[DynamicSubscription]  = sub.orElse(Some(binder.bind(el)))
-      def off(): Option[DynamicSubscription] = sub.flatMap { s => Try(s.kill()); None }
-      def toggle(active: Boolean): Unit      = sub = if (active) on() else off()
-      val toggledSignal: Signal[Unit]        = activeOn.composeAll(_.map(toggle), _.map(toggle))
-      el.amend(toggledSignal --> Observer.empty, onUnmountCallback(_ => off()))
-    }
+  def bindBusOn[X](active: Signal[Boolean])(in: EventStream[X], out: WriteBus[X]): Flow[El] =
+    element.map(_.amend(active.bindBus(in, out)))
+
+  def bindObserverOn[X](active: Signal[Boolean])(in: Observable[X], out: Observer[X]): Flow[El] =
+    element.map(_.amend(active.bindObserver(in, out)))
+
+  def bindFnOn[X](active: Signal[Boolean])(in: Observable[X], onNext: X => Unit): Flow[El] =
+    element.map(_.amend(active.bindFn(in, onNext)))
 
   private def asReactiveElement[Ref <: dom.Element](el: Ref): ReactiveElement[Ref] = {
     new ReactiveElement[Ref] {

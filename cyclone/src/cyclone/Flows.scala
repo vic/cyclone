@@ -78,7 +78,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   ): Flow[Cyclone[E, CI, CS, CO]] =
     for {
       cyclone <- spin(c)
-      _       <- bind(cyclone.bind(), active)
+      _       <- element.map(_.amend(cyclone.bind(active)))
     } yield cyclone
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {
@@ -91,7 +91,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   }
 
   def sendAll[X](events: => EventStream[X], to: => WriteBus[X], active: => Signal[Boolean] = trueSignal): Flow[Unit] =
-    bind(events --> to, active).mapTo(())
+    bindBusOn(active)(events, to).mapTo(())
 
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to, active = events.mapTo(false).startWith(true))

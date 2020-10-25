@@ -19,12 +19,12 @@ trait Pair {
       override val state: Signal[State]        = self.state
       override val output: EventStream[Output] = self.output
 
-      override def bind(): Binder[El] =
+      override def bind(active: Signal[Boolean]): Binder[El] =
         ReactiveElement.bindCallback(_) { ctx =>
           ctx.thisNode.amend(
             self.bind(),
-            other.output --> self.input,
-            self.output --> other.input
+            active.bindBus(other.output, self.input),
+            active.bindBus(self.output, other.input)
           )
         }
     }

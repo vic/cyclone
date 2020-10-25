@@ -4,7 +4,7 @@ import com.raquo.laminar.api.L._
 
 trait Spin {
 
-  case class Spin[E <: Element, I, S, O] private () extends Flows[E, I, S, O] with Implicits {
+  case class Spin[E <: Element, I, S, O] private () extends Flows[E, I, S, O] {
 
     def apply()(implicit ev: Unit =:= S): Cyclone[E, I, S, O] = apply(state = ())
 
