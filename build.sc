@@ -5,6 +5,7 @@ import scalalib._
 import publish._
 import scalajslib._
 import ammonite.ops._
+import coursier.{MavenRepository, Repository}
 import mill.define.Cross
 
 import scala.util.Properties
@@ -53,9 +54,16 @@ class Cyclone(val crossScalaVersion: String, val crossScalaJSVersion: String)
     )
   )
 
+  override def repositories: Seq[Repository] = Seq(
+    MavenRepository("https://jitpack.io")
+ ) ++ super.repositories
+
   override def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"com.raquo::laminar::0.11.0",
-    ivy"com.raquo::airstream::0.11.1"
+    ivy"com.raquo::airstream::0.11.1",
+    ivy"dev.zio::zio::1.0.3",
+    ivy"dev.zio::zio-streams::1.0.3"
+//    ivy"com.github.zio-mesh::zio-arrow::63e61c9"
   )
 
   object tests extends Tests with ScalaJSModule {

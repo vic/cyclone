@@ -11,6 +11,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
   private type Kont[X] = X => Flow[_]
 
   private lazy val flowBus = new EventBus[Flow[_]]
+//  protected val flowBus: EventBus[Flow[_]]
 
   private lazy val inputBus   = new EventBus[I]
   lazy val input: WriteBus[I] = inputBus.writer
