@@ -2,8 +2,7 @@ package examples.jquery_interop
 
 import cyclone._
 
-import com.raquo.laminar.api.L
-import L._
+import com.raquo.laminar.api.L._
 
 import scalajs.js
 import org.scalajs.dom
@@ -32,7 +31,7 @@ object DatePicker {
       val initialState: MomentRange = startDate -> endDate
 
       val mainFlow: Flow[Unit] = for {
-        jq <- element[L.Input].map(el => jQuery(el.ref))
+        jq <- element[Input].map(el => jQuery(el.ref))
         range <- fromCallback[MomentRange] { cb =>
           val pluginOptions = literal(opens = "left", startDate = startDate, endDate = endDate)
           jq.daterangepicker(pluginOptions, { (start: Moment, end: Moment) => cb(start -> end) })

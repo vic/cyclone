@@ -12,7 +12,7 @@ object Hello {
       import cycle._
 
 
-      def onInput(input: Input) = input match {
+      def onInput(input: In) = input match {
         case SayHello(name) =>
           updateStateTo(name.toUpperCase())
       }

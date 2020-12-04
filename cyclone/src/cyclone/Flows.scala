@@ -96,7 +96,7 @@ trait Flows[I, S, O] extends FlowTypes[I, S, O] with ElementFlows[I, S, O] {
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to, active = events.mapTo(false).startWith(true))
 
-  def tell(to: Cyclone[_, _, _])(i: => to.Input): Flow[Unit] =
+  def tell(to: Cyclone[_, _, _])(i: => to.In): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe

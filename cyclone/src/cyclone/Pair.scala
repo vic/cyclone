@@ -15,9 +15,9 @@ trait Pair {
       other: Cyclone.IO[O, I]
   ): Cyclone[I, S, O] =
     new Cyclone[I, S, O] {
-      override val input: WriteBus[Input]      = self.input
+      override val input: WriteBus[In]      = self.input
       override val state: Signal[State]        = self.state
-      override val output: EventStream[Output] = self.output
+      override val output: EventStream[Out] = self.output
 
       override def bind[E <: Element](active: Signal[Boolean]): Binder[E] =
         ReactiveElement.bindCallback(_) { ctx =>

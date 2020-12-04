@@ -19,9 +19,9 @@ trait Between {
       right: Cyclone.IO[RI, RO]
   ): Cyclone[Either[LO, RO], S, Either[LI, RI]] =
     new Cyclone[Either[LO, RO], S, Either[LI, RI]] {
-      override val input: WriteBus[Input]      = center.input
+      override val input: WriteBus[In]      = center.input
       override val state: Signal[State]        = center.state
-      override val output: EventStream[Output] = center.output
+      override val output: EventStream[Out] = center.output
 
       override def bind[E <: Element](active: Signal[Boolean]): Binder[E] =
         ReactiveElement.bindCallback(_) { ctx =>

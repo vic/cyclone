@@ -5,9 +5,9 @@ import com.raquo.laminar.api.L._
 import scala.util.{Failure, Success, Try}
 
 trait FlowTypes[I, S, O] {
-  type Input  = I
+  type In  = I
   type State  = S
-  type Output = O
+  type Out = O
 
   type UpdateState    = cyclone.UpdateState[S]
   type EmitInput      = cyclone.EmitInput[I]

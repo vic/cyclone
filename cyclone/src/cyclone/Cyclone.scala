@@ -4,9 +4,9 @@ import com.raquo.laminar.api.L._
 
 // Cyclones are circular Airstreams around an stateful Vortex
 trait Cyclone[I, S, O] extends FlowTypes[I, S, O] {
-  val input: WriteBus[Input]
+  val input: WriteBus[In]
   val state: Signal[State]
-  val output: EventStream[Output]
+  val output: EventStream[Out]
 
   def bind[E <: Element](active: Signal[Boolean]): Binder[E]
   final def bind[E <: Element](): Binder[E] = bind[E](EventStream.empty.startWith(true))
