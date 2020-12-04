@@ -7,9 +7,10 @@ object Hello {
 
   case class SayHello(to: String)
 
-  val hello: Cyclone[Div, SayHello, String, Nothing] =
-    Cyclone.spin[Div, SayHello, String, Nothing] { cycle =>
+  val hello: Cyclone[SayHello, String, Nothing] =
+    Cyclone[SayHello, String, Nothing] { cycle =>
       import cycle._
+
 
       def onInput(input: Input) = input match {
         case SayHello(name) =>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -42,11 +42,18 @@ case "$1" in
  ;;
 
  cs)
-   test -x $BASE_DIR/cs || {
-     curl -o $BASE_DIR/cs -qL https://git.io/coursier-cli
-     chmod +x $BASE_DIR/cs
-   }
-   exec $BASE_DIR/cs "${@:2}"
+   if command -v coursier >/dev/null; then
+     cs="$(command -v coursier)"
+   elif command -v cs >/dev/null; then
+     cs="$(command -v cs)"
+   else
+     test -x $BASE_DIR/cs || {
+       curl -o $BASE_DIR/cs -qL https://git.io/coursier-cli
+       chmod +x $BASE_DIR/cs
+     }
+     cs="$BASE_DIR/cs"
+   fi
+   exec "$cs" "${@:2}"
  ;;
 
  example)

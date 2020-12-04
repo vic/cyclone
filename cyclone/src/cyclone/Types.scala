@@ -4,8 +4,7 @@ import com.raquo.laminar.api.L._
 
 import scala.util.{Failure, Success, Try}
 
-trait FlowTypes[E <: Element, I, S, O] {
-  type El     = E
+trait FlowTypes[I, S, O] {
   type Input  = I
   type State  = S
   type Output = O
@@ -13,7 +12,6 @@ trait FlowTypes[E <: Element, I, S, O] {
   type UpdateState    = cyclone.UpdateState[S]
   type EmitInput      = cyclone.EmitInput[I]
   type EmitOutput     = cyclone.EmitOutput[O]
-  type MountedContext = cyclone.MountedContext[E]
   type Handler        = cyclone.Handler[I]
   type UpdateHandler  = cyclone.UpdateHandler[Handler]
 }

@@ -27,8 +27,8 @@ object Slider {
   type Vue = js.Dynamic
   val Vue: Vue = global.Vue
 
-  val slider: Cyclone[Div, Nothing, Int, Nothing] =
-    Cyclone.spin[Div, Nothing, Int, Nothing] { cycle =>
+  val slider: Cyclone[Nothing, Int, Nothing] =
+    Cyclone[Nothing, Int, Nothing] { cycle =>
       import cycle._
 
       val initialState = 50
@@ -53,7 +53,7 @@ object Slider {
       val mainFlow: Flow[Unit] =
         for {
           (onChange, changes: Flow[Int]) <- makeCallback[Int]()
-          vue <- element
+          vue <- element[Element]
             .map(_.amend(vueView))
             .map(el => vueInit(el.ref, onChange))
           _ <- changes.flatMap(updateStateTo(_))

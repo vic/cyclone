@@ -5,21 +5,21 @@ import com.raquo.laminar.nodes.ReactiveElement
 
 trait Pair {
 
-  def paired[E <: Element, I, S, O](
+  def paired[I, S, O](
       other: Cyclone.IO[O, I]
-  )(fn: Cyclone.Spin[E, I, S, O] => Cyclone[E, I, S, O]): Cyclone[E, I, S, O] =
+  )(fn: Cyclone.Spin[I, S, O] => Cyclone[I, S, O]): Cyclone[I, S, O] =
     bindPair(fn(Cyclone.Spin()), other)
 
-  private def bindPair[E <: Element, I, S, O](
-      self: Cyclone[E, I, S, O],
+  private def bindPair[I, S, O](
+      self: Cyclone[I, S, O],
       other: Cyclone.IO[O, I]
-  ): Cyclone[E, I, S, O] =
-    new Cyclone[E, I, S, O] {
+  ): Cyclone[I, S, O] =
+    new Cyclone[I, S, O] {
       override val input: WriteBus[Input]      = self.input
       override val state: Signal[State]        = self.state
       override val output: EventStream[Output] = self.output
 
-      override def bind(active: Signal[Boolean]): Binder[El] =
+      override def bind[E <: Element](active: Signal[Boolean]): Binder[E] =
         ReactiveElement.bindCallback(_) { ctx =>
           ctx.thisNode.amend(
             self.bind(),

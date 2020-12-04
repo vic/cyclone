@@ -2,7 +2,7 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlows[E, I, S, O] {
+trait Flows[I, S, O] extends FlowTypes[I, S, O] with ElementFlows[I, S, O] {
 
   final val emptyFlow: Flow[Nothing] = EmptyFlow
 
@@ -67,18 +67,18 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
       bus.events
     }
 
-  def spin[WE <: Element, WI, WS, WO](
-      w: Cyclone.Spin[WE, WI, WS, WO] => Cyclone[WE, WI, WS, WO]
-  ): Flow[Cyclone[WE, WI, WS, WO]] =
-    value(Cyclone.spin[WE, WI, WS, WO](w))
+  def spin[WI, WS, WO](
+      w: Cyclone.Spin[WI, WS, WO] => Cyclone[WI, WS, WO]
+  ): Flow[Cyclone[WI, WS, WO]] =
+    value(Cyclone[WI, WS, WO](w))
 
   def spawn[CI, CS, CO](
-      c: Cyclone.Spin[E, CI, CS, CO] => Cyclone[E, CI, CS, CO],
+      c: Cyclone.Spin[CI, CS, CO] => Cyclone[CI, CS, CO],
       active: Signal[Boolean] = trueSignal
-  ): Flow[Cyclone[E, CI, CS, CO]] =
+  ): Flow[Cyclone[CI, CS, CO]] =
     for {
       cyclone <- spin(c)
-      _       <- element.map(_.amend(cyclone.bind(active)))
+      _       <- element[Element].map(_.amend(cyclone.bind(active)))
     } yield cyclone
 
   private def onlyFirst[X](ev: EventStream[X]): EventStream[X] = {
@@ -96,7 +96,7 @@ trait Flows[E <: Element, I, S, O] extends FlowTypes[E, I, S, O] with ElementFlo
   def sendOne[X](events: => EventStream[X], to: => WriteBus[X]): Flow[Unit] =
     sendAll(events.compose(onlyFirst), to, active = events.mapTo(false).startWith(true))
 
-  def tell(to: Cyclone[_, _, _, _])(i: => to.Input): Flow[Unit] =
+  def tell(to: Cyclone[_, _, _])(i: => to.Input): Flow[Unit] =
     sendOne(EventStream.fromValue(i, emitOnce = true), to.input)
 
   // TODO: Ask, Subscribe

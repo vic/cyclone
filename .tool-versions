@@ -1,3 +1,3 @@
-#graalvm: graalvm-ce-java11:20.2.0
+#graalvm: graalvm-ce-java11:20.3.0
 java adopt-openjdk-11+28
 scala 2.13.2

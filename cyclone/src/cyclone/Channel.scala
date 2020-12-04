@@ -11,9 +11,9 @@ trait Channel {
 
   import Channel._
 
-  def channel[E <: Element, P, C, Q, R, S, O](
-      fn: Cyclone.Spin[E, Req[P, C, Q, R], S, O] => Cyclone[E, Req[P, C, Q, R], S, O]
-  ): Cyclone[E, Req[P, C, Q, R], S, O] =
+  def channel[P, C, Q, R, S, O](
+      fn: Cyclone.Spin[Req[P, C, Q, R], S, O] => Cyclone[Req[P, C, Q, R], S, O]
+  ): Cyclone[Req[P, C, Q, R], S, O] =
     fn(Cyclone.Spin())
 
 }

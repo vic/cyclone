@@ -6,7 +6,7 @@ import com.raquo.laminar.nodes.ReactiveElement
 
 import scala.util.{Failure, Success, Try}
 
-private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O] {
+private[cyclone] trait Vortex[I, S, O] extends Cyclone[I, S, O] {
 
   private type Kont[X] = X => Flow[_]
 
@@ -140,9 +140,9 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     }
   }
 
-  private def inContextEffects(c: MountContext[E]) = {
+  private def inContextEffects[E <: Element](c: MountContext[E]) = {
     def select: PartialFunction[Flow[_], EventStream[Flow[_]]] = {
-      case FlatMap(a: MountedContext, b: Kont[MountContext[E]]) =>
+      case FlatMap(a: MountedContext[E], b: Kont[MountContext[E]]) =>
         EventStream
           .fromValue(c, emitOnce = true)
           .map(b)
@@ -150,10 +150,10 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     flatMapFlow.collect(select).flatten
   }
 
-  private def loopbackEffects(c: MountContext[E]): EventStream[Flow[_]] = EventStream.merge(
+  private def loopbackEffects[E <: Element](c: MountContext[E]): EventStream[Flow[_]] = EventStream.merge(
     pure,
     emitInput,
-    inContextEffects(c),
+    inContextEffects[E](c),
     fromStream,
     updateState.map(_._2),
     updateHandler.map(_._2),
@@ -162,7 +162,7 @@ private[cyclone] trait Vortex[E <: Element, I, S, O] extends Cyclone[E, I, S, O]
     nestedFlatMap
   )
 
-  override def bind(active: Signal[Boolean]): Binder[E] = {
+  override def bind[E <: Element](active: Signal[Boolean]): Binder[E] = {
     ReactiveElement.bindCallback(_) { ctx =>
       ctx.thisNode.amend(
         active.bindObserver(emptyFlows, Observer.empty),

@@ -18,15 +18,15 @@ object FetchChannel extends FetchChannel {
       init: RequestInit
   )
 
-  val channel: Cyclone[Element, (P, C, IO[(Q, R), Q]), Unit, Nothing] =
-    Cyclone.channel[Element, P, C, Q, R, Unit, Nothing] {
-      cycle: Cyclone.Spin[Element, (P, C, IO[(Q, R), Q]), Unit, Nothing] =>
+  val channel: Cyclone[(P, C, IO[(Q, R), Q]), Unit, Nothing] =
+    Cyclone.channel[P, C, Q, R, Unit, Nothing] {
+      cycle: Cyclone.Spin[(P, C, IO[(Q, R), Q]), Unit, Nothing] =>
         import cycle._
 
         def topic(oi: IO[(Q, R), Q]): Flow[Unit] =
           for {
             _ <- unit
-            io: Cyclone[El, Q, Unit, (Q, R)] = Cyclone.paired(oi)(topicExecutor)
+            io: Cyclone[Q, Unit, (Q, R)] = Cyclone.paired(oi)(topicExecutor)
             _ <- bind(io.bind())
           } yield ()
 
@@ -34,7 +34,7 @@ object FetchChannel extends FetchChannel {
         cycle(handler)
     }
 
-  private val topicExecutor = { cycle: Cyclone.Spin[Element, Q, Unit, (Q, R)] =>
+  private val topicExecutor = { cycle: Cyclone.Spin[Q, Unit, (Q, R)] =>
     import cycle._
 
     val handler: Handler = {

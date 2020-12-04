@@ -2,7 +2,7 @@ package cyclone
 
 import com.raquo.laminar.api.L._
 
-trait Waterspout[E <: Element, I, S, O] extends Vortex[E, I, S, O] {
+trait Waterspout[I, S, O] extends Vortex[I, S, O] {
   protected def makeState(updates: EventStream[S]): Signal[S]
 
   protected def makeHandler(updates: EventStream[Handler]): Signal[Handler]
@@ -13,7 +13,7 @@ trait Waterspout[E <: Element, I, S, O] extends Vortex[E, I, S, O] {
     makeHandler(handlerChanges)
 }
 
-trait Landspout[E <: Element, I, S, O] extends Vortex[E, I, S, O] with Flows[E, I, S, O] {
+trait Landspout[I, S, O] extends Vortex[I, S, O] with Flows[I, S, O] {
   protected val initialState: State
   protected lazy val initialHandler: Handler = handleNone
 
